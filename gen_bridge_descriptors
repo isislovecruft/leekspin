@@ -27,7 +27,7 @@ def gettimestamp():
 def getHexString(size):
     s = ""
     for i in xrange(size):
-        s+= random.choice("ABCDEF0123456789") 
+        s+= random.choice("ABCDEF0123456789")
     return s
 
 def generateDesc():
@@ -83,8 +83,8 @@ if __name__ == "__main__":
         df += desc
 
         sf += generateStatus(info)
-	ei += generateExtraInfo(binascii.b2a_hex(info[0]))
-        
+        ei += generateExtraInfo(binascii.b2a_hex(info[0]))
+
     try:
         f = open("networkstatus-bridges", 'w')
         f.write(sf)
