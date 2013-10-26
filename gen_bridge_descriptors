@@ -762,7 +762,7 @@ def create(count):
         if not os.path.isfile(cached):
             with open(cached, 'wb') as fh:
                 fh.flush()
-        if os.path.isfile(cached)
+        if os.path.isfile(cached):
             os.rename(cached, "cached-extrainfo")
 
         for fn, giantstring in descriptor_files.items():
