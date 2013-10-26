@@ -1,107 +1,781 @@
-#!/usr/bin/env python -tt
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# gen_bridge_descriptors
+# ----------------------
+# XXX describeme
+#
+# :authors: Matthew Finkel
+#           Isis Lovecruft <isis@torproject.org> 0xA3ADB67A2CDB8B35
+# :licence: distributed with BridgeDB, see included LICENSE file
+# :copyright: (c) 2013 Matthew Finkel
+#             (c) 2013 Isis Agora Lovecruft
+#             (c) 2013 The Tor Project, Inc.
+#______________________________________________________________________________
 
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
+import argparse
+import binascii
+import hashlib
+import ipaddr
+import math
 import sys
 import random
+import re
 import time
-import ipaddr
+
 from datetime import datetime
-import binascii
+from codecs   import open as open
+
+try:
+    import OpenSSL.crypto
+except (ImportError, NameError) as error:
+    print("This script requires pyOpenSSL>=0.13.0")
+    raise SystemExit(error.message)
+try:
+    from bridgedb.parse import versions
+except (ImportError, NameError) as error:
+    print(error.message)
+    print("WARNING: Cannot import bridgedb package!",
+          "Generated descriptor content won't accurately reflect descriptor",
+          "information created by different Tor versions.", sep='\n\t')
+try:
+    import nacl
+    import nacl.secret
+except (ImportError, NameError, IOError):
+    nacl = secret = None
 
 
-def usage():
-    print "syntax: generatedescriptors.py <count>\n"\
-          "    count: number of descriptors to generate\n"
+#: The version of this script
+__version__ = '0.2.0'
+
+#: The <major>.<minor>.<micro>.<rev> version numbers for tor, taken from the
+#: 'server-versions' line of a consensus file
+SERVER_VERSIONS = """0.2.2.39,0.2.3.24-rc,0.2.3.25,
+0.2.4.5-alpha,0.2.4.6-alpha,0.2.4.7-alpha,0.2.4.8-alpha,0.2.4.9-alpha,
+0.2.4.10-alpha,0.2.4.11-alpha,0.2.4.12-alpha,0.2.4.14-alpha,0.2.4.15-rc,
+0.2.4.16-rc,0.2.4.17-rc,0.2.5.1-alpha""".replace('\n', '').split(',')
+
+#: Strings found in PEM-encoded objects created by Tor
+TOR_BEGIN_KEY = "-----BEGIN RSA PUBLIC KEY-----"
+TOR_END_KEY   = "-----END RSA PUBLIC KEY-----"
+TOR_BEGIN_SK  = "-----BEGIN RSA PRIVATE KEY-----"
+TOR_END_SK    = "-----END RSA PRIVATE KEY-----"
+TOR_BEGIN_SIG = "-----BEGIN SIGNATURE-----"
+TOR_END_SIG   = "-----END SIGNATURE-----"
+
+#: Strings found in PEM-encoded objects created by OpenSSL
+OPENSSL_BEGIN_KEY  = "-----BEGIN PRIVATE KEY-----"
+OPENSSL_END_KEY    = "-----END PRIVATE KEY-----"
+OPENSSL_BEGIN_CERT = "-----BEGIN CERTIFICATE-----"
+OPENSSL_END_CERT   = "-----END CERTIFICATE-----"
+
+PEM = OpenSSL.crypto.FILETYPE_PEM
+
+
+class OpenSSLKeyGenError(Exception):
+    """Raised when there is a problem generating a new key."""
+
+
+def getArgParser():
+    """Get our :class:`~argparse.ArgumentParser`."""
+    parser = argparse.ArgumentParser(add_help=True)
+    parser.version = __version__
+    parser.description  = "Generate a signed set of network-status, "
+    parser.description += "extra-info, and server descriptor documents "
+    parser.description += "for mock Tor relays or bridges."
+    infoargs = parser.add_mutually_exclusive_group()
+    verbargs = parser.add_mutually_exclusive_group()
+    infoargs.add_argument("-v", "--verbose", action="store_true",
+                          help="print information to stdout")
+    infoargs.add_argument("-q", "--quiet", action="store_true",
+                          help="don't print anything")
+    verbargs.add_argument("--version", action="store_true",
+                          help="print the %s version and exit".format(
+                              parser.prog))
+    group = parser.add_argument_group()
+    group.title = "required arguments"
+    group.add_argument("-n", "--descriptors", default=0,
+                       help="generate <n> descriptor sets", type=int)
+    return parser
 
 def randomIP():
-    return randomIP4()
+    """Create a random IPv4 or IPv6 address."""
+    maybe = int(random.getrandbits(1))
+    ip = randomIPv4() if maybe else randomIPv6()
+    return ip
 
-def randomIP4():
-    return ipaddr.IPAddress(random.getrandbits(32))
+def randomIPv4():
+    """Create a random IPv4 address."""
+    return ipaddr.IPv4Address(random.getrandbits(32))
+
+def randomIPv6():
+    """Create a random IPv6 address."""
+    return ipaddr.IPv6Address(random.getrandbits(128))
 
 def randomPort():
-    return random.randint(1,65535)
-
-def gettimestamp():
-    return time.strftime("%Y-%m-%d %H:%M:%S")
+    """Get a random integer in the range [1024, 65535]."""
+    return random.randint(1025, 65535)
 
 def getHexString(size):
     s = ""
     for i in xrange(size):
-        s+= random.choice("ABCDEF0123456789")
+        s += random.choice("ABCDEF0123456789")
     return s
 
-def generateDesc():
+def makeTimeStamp(now=None, fmt=None, variation=False, period=None):
+    """Get a random timestamp suitable for a bridge server descriptor.
 
-    baseDesc = "router Unnamed %s %s 0 %s\n"\
-               "opt fingerprint %s\n"\
-               "opt @purpose bridge\n"\
-               "opt published %s\n"\
-               "router-signature\n"
-    fp = "DEAD BEEF F00F DEAD BEEF F00F " + \
-         getHexString(4) + " " + getHexString(4) + " " + \
-         getHexString(4) + " " + getHexString(4)
-    ip = randomIP()
-    orport = randomPort()
-    dirport = randomPort()
-    ID = binascii.a2b_hex(fp.replace(" ", ""))
-    df =  baseDesc % (ip, orport, dirport, fp, gettimestamp())
-    return (df, (ID, ip, orport, dirport))
+    :param int now: The time, in seconds since the Epoch, to generate the
+        timestamp for (and to consider as the maximum time, if other options
+        are enabled).
+    :param string fmt: A strftime(3) format string for the timestamp. If not
+        given, defaults to ISO-8601 format without the 'T' separator.
+    :param bool variation: If True, enable timestamp variation. Otherwise,
+        make all timestamps be set to the current time.
+    :type period: int or None
+    :param period: If given, vary the generated timestamps to be a random time
+        between ``period`` hours ago and the current time. If None, generate
+        completely random timestamps which are anywhere between the Unix Epoch
+        and the current time. This parameter only has an effect if
+        ``variation`` is enabled.
+    """
+    now = int(now) if now is not None else int(time.time())
+    fmt = fmt if fmt else "%Y-%m-%d %H:%M:%S"
 
-def generateStatus(info, ID=None, ip=None, orport=None, dirport=None):
-    baseStatus = "r %s %s %s %s %s %d %d\n"\
-                 "s Running Stable\n"
+    if variation:
+        then = 1
+        if period is not None:
+            secs = int(period) * 3600
+            then = now - secs
+        # Get a random number between one epochseconds number and another
+        diff = random.randint(then, now)
+        # Then rewind the clock
+        now = diff
 
-    if info and len(info) == 4:
-        ID = info[0]
-        ip = info[1]
-        orport = info[2]
-        dirport = info[3]
-    return "".join(baseStatus % ("namedontmattah", binascii.b2a_base64(ID)[:-2],
-           "randomstring", gettimestamp(), ip,
-            orport, dirport))
+    return time.strftime(fmt, time.localtime(now))
 
-def generateExtraInfo(fp, ip=None):
-    baseExtraInfo = "extra-info %s %s\n"\
-                    "transport %s %s:%d\n"\
-                    "router-signature\n"
-    if not ip:
-        ip = randomIP()
-    return "".join(baseExtraInfo % ("namedontmattah", fp,
-                                    random.choice(["obfs2", "obfs3", "obfs2"]),
-                                    ip, randomPort()))
+def shouldHaveOptPrefix(version):
+    """Returns true if a tor ``version`` should have the 'opt ' prefix.
+
+    In tor, up to and including, version 0.2.3.25, server-descriptors (bridge
+    or regular) prefixed several lines with 'opt '. For the 0.2.3.x series,
+    these lines were:
+        - 'protocols'
+        - 'fingerprint'
+        - 'hidden-service-dir'
+        - 'extra-info-digest'
+
+    :param string version: One of ``SERVER_VERSIONS``.
+    :rtype: bool
+    :returns: True if we should include the 'opt ' prefix.
+    """
+    changed_in  = versions.Version('0.2.4.1-alpha', package='tor')
+    our_version = versions.Version(version, package='tor')
+    if our_version < changed_in:
+        return True
+    return False
+
+def makeProtocolsLine(version=None):
+    """Generate an appropriate [bridge-]server-descriptor 'protocols' line.
+
+    :param string version: One of ``SERVER_VERSIONS``.
+    :rtype: string
+    :returns: An '@type [bridge-]server-descriptor' 'protocols' line.
+    """
+    line = ''
+    if (version is not None) and shouldHaveOptPrefix(version):
+        line += 'opt '
+    line += 'protocols Link 1 2 Circuit 1'
+    return line
+
+def convertToSpaceyFingerprint(fingerprint):
+    """Convert a colon-delimited fingerprint to be space-delimited.
+
+    Given a fingerprint with sets of two hexidecimal characters separated by
+    colons, for example a certificate or key fingerprint output from OpenSSL:
+      |
+      | 51:58:9E:8B:BF:5C:F6:5A:68:CB:6D:F4:C7:6F:98:C6:B2:02:69:45
+      |
+
+    convert it to the following format:
+      |
+      | 5158 9E8B BF5C F65A 68CB 6DF4 C76F 98C6 B202 6945
+      |
+
+    :param string fingerprint: A 2-character colon-delimited hex fingerprint.
+    :rtype: string
+    :returns: A 4-character space-delimited fingerprint.
+    """
+    # The boolean of the non-equality is necessary because -1 is somehow
+    # truthy in Python…
+    check = lambda f: bool(f.find(':') != -1)
+
+    while True:
+        if check(fingerprint):
+            fingerprint = ''.join(fingerprint.split(':', 1))
+            if check(fingerprint):
+                fingerprint = ' '.join(fingerprint.split(':', 1))
+                continue
+            break
+        break
+
+    return fingerprint
+
+def makeFingerprintLine(fingerprint, version=None):
+    """Generate an appropriate [bridge-]server-descriptor 'fingerprint' line.
+
+    For example, for tor-0.2.3.25 and prior versions, this would look like:
+      |
+      | opt fingerprint D4BB C339 2560 1B7F 226E 133B A85F 72AF E734 0B29
+      |
+
+    :param string version: One of ``SERVER_VERSIONS``.
+    :param string timestamp: The timestamp, in seconds since Epoch, to record
+        in the 'published' line.
+    :rtype: string
+    :returns: An '@type [bridge-]server-descriptor' 'published' line.
+    """
+    line = ''
+    if (version is not None) and shouldHaveOptPrefix(version):
+        line += 'opt '
+    line += 'fingerprint %s' % convertToSpaceyFingerprint(fingerprint)
+    return line
+
+def makeBandwidthLine(variance=30):
+    """Create a random 'bandwidth' line with some plausible burst variance.
+
+    From torspec.git/dir-spec.txt, §2.1 "Router descriptors":
+      | "bandwidth" bandwidth-avg bandwidth-burst bandwidth-observed NL
+      |
+      | [Exactly once]
+      |
+      |   Estimated bandwidth for this router, in bytes per second.  The
+      |   "average" bandwidth is the volume per second that the OR is willing
+      |   to sustain over long periods; the "burst" bandwidth is the volume
+      |   that the OR is willing to sustain in very short intervals.  The
+      |   "observed" value is an estimate of the capacity this relay can
+      |   handle.  The relay remembers the max bandwidth sustained output over
+      |   any ten second period in the past day, and another sustained input.
+      |   The "observed" value is the lesser of these two numbers.
+
+    The "observed" bandwidth, in this function, is taken as some random value,
+    bounded between 20KB/s and 2MB/s. For example, say:
+
+    >>> import math
+    >>> variance = 25
+    >>> observed = 180376
+    >>> percentage = float(variance) / 100.
+    >>> percentage
+    0.25
+
+    The ``variance`` in this context is the percentage of the "observed"
+    bandwidth, which will be added to the "observed" bandwidth, and becomes
+    the value for the "burst" bandwidth:
+
+    >>> burst = observed + math.ceil(observed * percentage)
+    >>> assert burst > observed
+
+    This doesn't do much, since the "burst" bandwidth in a real
+    [bridge-]server-descriptor is reported by the OR; this function mostly
+    serves to avoid generating completely-crazy, totally-implausible bandwidth
+    values. The "average" bandwidth value is then just the mean value of the
+    other two.
+
+    :param integer variance: The percent of the fake "observed" bandwidth to
+        increase the "burst" bandwidth by.
+    :rtype: string
+    :returns: A "bandwidth" line for a [bridge-]server-descriptor.
+    """
+    observed = random.randint(20 * 2**10, 2 * 2**30)
+    percentage = float(variance) / 100.
+    burst = int(observed + math.ceil(observed * percentage))
+    bandwidths = [burst, observed]
+    nitems = len(bandwidths) if (len(bandwidths) > 0) else float('nan')
+    avg = int(math.ceil(float(sum(bandwidths)) / nitems))
+    line = "bandwidth %s %s %s" % (avg, burst, observed)
+    return line
+
+def makeExtraInfoDigestLine(hexdigest, version):
+    """Create a line to embed the hex SHA-1 digest of the extrainfo.
+
+    :param string hexdigest: Should be the hex-encoded (uppercase) output of
+        the SHA-1 digest of the generated extrainfo document (this is the
+        extra-info descriptor, just without the signature at the end). This is
+        the same exact digest which gets signed by the OR server identity key,
+        and that signature is appended to the extrainfo document to create the
+        extra-info descriptor.
+    :param string version: One of ``SERVER_VERSIONS``.
+    :rtype: string
+    :returns: An ``@type [bridge-]server-descriptor`` 'extra-info-digest'
+        line.
+    """
+    line = ''
+    if (version is not None) and shouldHaveOptPrefix(version):
+        line += 'opt '
+    line += 'extra-info-digest %s' % hexdigest
+    return line
+
+def makeHSDirLine(version):
+    """This line doesn't do much… all the cool kids are HSDirs these days.
+
+    :param string version: One of ``SERVER_VERSIONS``.
+    :rtype: string
+    :returns: An ``@type [bridge-]server-descriptor`` 'hidden-service-dir'
+        line.
+    """
+    line = ''
+    if (version is not None) and shouldHaveOptPrefix(version):
+        line += 'opt '
+    line += 'hidden-service-dir'
+    return line
+
+def createRSAKey(bits=1024):
+    """Create a new RSA keypair.
+
+    :param integer bits: The bitlength of the keypair to generate.
+    :rtype: :class:`OpenSSL.crypto.PKey`
+    :returns: An RSA keypair of bitlength ``bits``.
+    """
+    key = OpenSSL.crypto.PKey()
+    key.generate_key(OpenSSL.crypto.TYPE_RSA, bits)
+    if not key.check():
+        raise OpenSSLKeyGenError("Couldn't create new RSA 1024-bit key")
+    return key
+
+def createNTORKey():
+    """Create a Curve25519 key."""
+    if nacl is None:
+        raise NotImplemented
+
+def createKey(selfsign=True, digest='sha1'):
+    """Create a set of public and private RSA keypairs and corresponding certs.
+
+    :param boolean selfsign: If True, use the private key to sign the public
+        certificate (otherwise, the private key will only sign the private
+        certificate to which it is attached).
+    :param string digest: The digest to use. (default: 'sha1')
+    :rtype: 4-tuple
+    :returns: (private_key, private_cert, public_key, public_cert)
+    """
+    privateKey  = createRSAKey()
+    privateCert = attachKey(privateKey, createTLSCert())
+    publicKey   = privateCert.get_pubkey()
+    publicCert  = attachKey(publicKey, createTLSCert(), selfsign=False)
+
+    if selfsign:
+        # We already signed the publicCert with the publicKey, now we need to
+        # sign the publicCert with the privateKey
+        publicCert.sign(privateKey, digest)
+
+    return (privateKey, privateCert, publicKey, publicCert)
+
+def attachKey(key, cert, selfsign=True, digest='sha1', pem=False):
+    """Attach a key to a cert and optionally self-sign the cert.
+
+    :type key: :class:`OpenSSL.crypto.PKey`
+    :param key: A previously generated key, used to generate the other half of
+        the keypair.
+    :type cert: :class:`OpenSSL.crypto.X509`
+    :param cert: A TLS certificate without a public key attached to it, such
+       as one created with :func:`createTLSCert`.
+    :param boolean selfsign: If True, use the ``key`` to self-sign the
+        ``cert``. Note that this will result in several nasty OpenSSL errors
+        if you attempt to export the public key of a cert in order to create
+        another cert which *only* holds the public key. (Otherwise, if you
+        used the first cert in the following example, it contains both halves
+        of the RSA keypair.) Do this instead:
+
+    >>> secret_key = createRSAKey()
+    >>> secret_cert = attachKey(secret_key, createTLSCert(selfsign=True))
+    >>> public_key = secret_cert.get_pubkey()
+    >>> public_cert = attachKey(public_key, createTLSCert, selfsign=False)
+
+    :param string digest: The digest to use. Check your OpenSSL installation
+        to see which are supported. We pretty much only care about 'sha1' and
+        'sha256' here.
+    :param boolean pem: If True, return a 3-tuple of PEM-encoded strings, one
+        for each of (certificate, private_key, public_key), where
+        'certificate' is the original ``cert`` with the ``key`` attached,
+        'private_key' is the private RSA modulus, primes, and exponents
+        exported from the 'certificate', and 'public_key' is the public RSA
+        modulus exported from the cert. NOTE: Using this when passing in a key
+        with only the public RSA modulus (as described above) will result in
+        nasty OpenSSL errors. Trust me, you do *not* want to try to parse
+        OpenSSL's errors.
+    :raises: An infinite, labyrinthine mire of non-Euclidean OpenSSL errors
+        with non-deterministic messages and self-referential errorcodes,
+        tangled upon itself in contempt of sanity, hope, and decent software
+        engineering practices.
+    :returns: If ``pem`` is True, then the values described there are
+        returned. Otherwise, returns the ``cert`` with the ``key`` attached to
+        it.
+    """
+    # Attach the key to the certificate
+    cert.set_pubkey(key)
+
+    if selfsign:
+        # Self-sign the cert with the key, using the specified hash digest
+        cert.sign(key, digest)
+
+    if pem:
+        certificate = OpenSSL.crypto.dump_certificate(PEM, cert)
+        private_key = OpenSSL.crypto.dump_privatekey(PEM, key)
+        public_key = OpenSSL.crypto.dump_privatekey(PEM, cert.get_pubkey())
+        return certificate, private_key, public_key
+    return cert
+
+def createTLSCert(lifetime=None):
+    """Create a TLS certificate.
+
+    :param integer lifetime: The time, in seconds, that the certificate should
+        remain valid for.
+    :rtype: :class:`OpenSSL.crypto.X509`
+    :returns: A certificate, unsigned, and without a key attached to it.
+    """
+    if not lifetime:
+        # see `router_initialize_tls_context()` in src/or/router.c
+        lifetime = 5 + random.randint(0, 361)
+        lifetime = lifetime * 24 * 3600
+        if int(random.getrandbits(1)):
+            lifetime -= 1
+
+    cert = OpenSSL.crypto.X509()
+    cert.gmtime_adj_notBefore(0)        # Not valid before now
+    cert.gmtime_adj_notAfter(lifetime)
+    return cert
+
+def createTLSLinkCert(lifetime=7200):
+    """Create a certificate for the TLS link layer.
+
+    The TLS certificate used for the link layer between Tor relays, and
+    between clients and their bridges/guards, has a shorter lifetime than the
+    other certificates. Currently, these certs expire after two hours.
+
+    :param integer lifetime: The time, in seconds, that the certificate should
+        remain valid for.
+    :rtype: :class:`OpenSSL.crypto.X509`
+    :returns: A certificate, unsigned, and without a key attached to it.
+    """
+    cert = createTLSCert(lifetime)
+    cert.get_subject().CN = 'www.' + getHexString(16) + '.net'
+    cert.get_issuer().CN = 'www.' + getHexString(10) + '.com'
+    return cert
+
+def getPEMPublicKey(cert):
+    publicKey = OpenSSL.crypto.dump_privatekey(PEM, cert.get_pubkey())
+    # It says "PRIVATE KEY" just because the stupid pyOpenSSL wrapper is
+    # braindamaged. You can check that it doesn't include the RSA private
+    # exponents and primes by substituting ``OpenSSL.crypto.FILETYPE_TEXT``
+    # for the above ``PEM``.
+    publicKey = re.sub(OPENSSL_BEGIN_KEY, TOR_BEGIN_KEY, publicKey)
+    publicKey = re.sub(OPENSSL_END_KEY, TOR_END_KEY, publicKey)
+    return publicKey
+
+def getPEMPrivateKey(key):
+    privateKey = OpenSSL.crypto.dump_privatekey(PEM, key)
+    privateKey = re.sub(OPENSSL_BEGIN_KEY, TOR_BEGIN_SK, privateKey)
+    privateKey = re.sub(OPENSSL_END_KEY, TOR_END_SK, privateKey)
+    return privateKey
+
+def makeOnionKeys(bridge=True, digest='sha1'):
+    """Make all the keys and certificates necessary to fake an OR.
+
+    :param boolean bridge: If False, generate a server OR ID key, a signing
+        key, and a TLS certificate/key pair. If True, generate a client ID key
+        as well.
+    :param string digest: The digest to use. (default: 'sha1')
+    :returns: The server ID key, and a tuple of strings (fingerprint,
+       onion-key, signing-key), where onion-key and secret key are the strings
+       which should directly go into a server-descriptor. There are a *ton* of
+       keys and certs in the this function. If you need more for some reason,
+       this is definitely the thing you want to modify.
+    """
+    serverID = createKey(True)
+    SIDSKey, SIDSCert, SIDPKey, SIDPCert = serverID
+    serverLinkCert = createTLSLinkCert()
+    serverLinkCert.sign(SIDSKey, digest)
+
+    if bridge:
+        # For a bridge, a "client" ID key is used to generate the fingerprint
+        clientID = createKey(True)
+        CIDSKey, CIDSCert, CIDPKey, CIDPCert = clientID
+
+        # XXX I think we're missing some of the signatures
+        #     see torspec.git/tor-spec.txt §4.2 on CERTS cells
+        clientLinkCert = createTLSLinkCert()
+        clientLinkCert.sign(CIDSKey, digest)
+    else:
+        CIDSKey, CIDSCert, CIDPKey, CIDPCert = serverID
+
+    signing = createKey()
+    signSKey, signSCert, signPKey, signPCert = signing
+    onion = createKey()
+    onionSKey, onionSCert, onionPKey, onionPCert = onion
+
+    # This is the fingerprint of the server ID key, if we aren't a bridge. If
+    # we are a bridge, then this is the real fingerprint, which goes into our
+    # descriptor (but not the one that other ORs see when they connect to us)
+    fingerprint = CIDPCert.digest(digest)
+
+    onionKeyString   = 'onion-key\n%s' % getPEMPublicKey(onionPCert)
+    signingKeyString = 'signing-key\n%s' % getPEMPublicKey(signPCert)
+
+    # XXX we don't need anything else… right?
+    return SIDSKey, (fingerprint, onionKeyString, signingKeyString)
+
+def generateExtraInfo(fingerprint, ts, ipv4, port):
+    """Create an OR extra-info document.
+
+    See §2.2 "Extra-info documents" in torspec.git/dir-spec.txt.
+
+    :param string fingerprint: A space-separated, hex-encoded, SHA-1 digest of
+        the OR's private identity key. See :func:`convertToSpaceyFingerprint`.
+    :param string ts: An ISO-8601 timestamp. See :func:`makeTimeStamp`.
+    :param string ipv4: An IPv4 address.
+    :param string port: The OR's ORPort.
+    :rtype: string
+    :returns: An extra-info document (unsigned).
+    """
+    extra = []
+    extra.append("extra-info Unnamed %s" % fingerprint)
+    extra.append("published %s" % ts)
+    extra.append("write-history %s (900 s)\n3188736,2226176,2866176" % ts)
+    extra.append("read-history %s (900 s)\n3891200,2483200,2698240" % ts)
+    extra.append("dirreq-write-history %s (900 s)\n1024,0,2048" % ts)
+    extra.append("dirreq-read-history %s (900 s)\n0,0,0" % ts)
+    extra.append("geoip-db-digest %s\ngeoip6-db-digest %s"
+                 % (getHexString(40), getHexString(40)))
+    extra.append("dirreq-stats-end %s (86400 s)\ndirreq-v3-ips" % ts)
+    extra.append("dirreq-v3-reqs\ndirreq-v3-resp")
+    extra.append(
+        "ok=16,not-enough-sigs=0,unavailable=0,not-found=0,not-modified=0,busy=0")
+    extra.append("dirreq-v3-direct-dl complete=0,timeout=0,running=0")
+    extra.append("dirreq-v3-tunneled-dl complete=12,timeout=0,running=0")
+    extra.append("transport obfs3 %s:%d" % (ipv4, port + 1))
+    extra.append("transport obfs2 %s:%d" % (ipv4, port + 2))
+    extra.append("bridge-stats-end %s (86400 s)\nbridge-ips ca=8" % ts)
+    extra.append("bridge-ip-versions v4=8,v6=0\nbridge-ip-transports <OR>=8")
+    extra.append("router-signature")
+
+    return '\n'.join(extra)
+
+def generateNetstatus(idkey_digest, server_desc_digest, timestamp,
+                      ipv4, orport, ipv6=None, dirport=None,
+                      flags='Fast Guard Running Stable Valid',
+                      bandwidth_line=None):
+
+    idkey_b64  = binascii.b2a_base64(idkey_digest)
+    idb64      = str(idkey_b64).strip().rstrip('=========')
+    server_b64 = binascii.b2a_base64(server_desc_digest)
+    srvb64     = str(server_b64).strip()
+
+    if bandwidth_line is not None:
+        bw = int(bandwidth_line.split()[-1]) / 1024  # The 'observed' value
+    dirport = dirport if dirport else 0
+
+    status = []
+    status.append("r Unnamed %s %s %s %s %s %d" % (idb64, srvb64, timestamp,
+                                                   ipv4, orport, dirport))
+    if ipv6 is not None:
+        status.append("a [%s]:%s" % (ipv6, orport))
+    status.append("s %s\nw Bandwidth=%s\np reject 1-65535\n" % (flags, bw))
+
+    return '\n'.join(status)
+
+def signDescriptorDigest(key, descriptorDigest, digest='sha1'):
+    """Ugh...I hate OpenSSL.
+
+    The extra-info-digest is a SHA-1 hash digest of the extrainfo document,
+    that is, the entire extrainfo descriptor up until the end of the
+    'router-signature' line and including the newline, but not the actual
+    signature.
+
+    The signature at the end of the extra-info descriptor is a signature of
+    the above extra-info-digest. This signature is appended to the end of the
+    extrainfo document, and the extra-info-digest is added to the
+    'extra-info-digest' line of the [bridge-]server-descriptor.
+
+    The first one of these was created with a raw digest, the second with a
+    hexdigest. They both encode the the 'sha1' digest type if you check the
+    `-asnparse` output (instead of `-raw -hexdump`).
+
+    ∃!isisⒶwintermute:(feature/9865 *$<>)~/code/torproject/bridgedb/scripts ∴ openssl rsautl -inkey eiprivkey -verify -in eisig1 -raw -hexdump
+    0000 - 00 01 ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+    0010 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+    0020 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+    0030 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+    0040 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+    0050 - ff ff ff ff ff ff ff ff-ff ff ff ff 00 30 21 30   .............0!0
+    0060 - 09 06 05 2b 0e 03 02 1a-05 00 04 14 42 25 41 fb   ...+........B%A.
+    0070 - 82 ef 11 f4 5f 2c 95 53-67 2d bb fe 7f c2 34 7f   ...._,.Sg-....4.
+    ∃!isisⒶwintermute:(feature/9865 *$<>)~/code/torproject/bridgedb/scripts ∴ openssl rsautl -inkey eiprivkey -verify -in eisig2 -raw -hexdump
+    0000 - 00 01 ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+    0010 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+    0020 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+    0030 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+    0040 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+    0050 - ff ff ff ff ff ff ff ff-ff ff ff ff 00 30 21 30   .............0!0
+    0060 - 09 06 05 2b 0e 03 02 1a-05 00 04 14 44 30 ab 90   ...+........D0..
+    0070 - 93 d1 08 21 df 87 c2 39-2a 04 1c a5 bb 34 44 cd   ...!...9*....4D.
+
+    see http://www.emc.com/collateral/white-papers/h11300-pkcs-1v2-2-rsa-cryptography-standard-wp.pdf
+    for why this function is totally wrong.
+    """
+    sig = binascii.b2a_base64(OpenSSL.crypto.sign(key, descriptorDigest,
+                                                  digest))
+    sigCopy = sig
+    originalLength = len(sigCopy.replace('\n', ''))
+
+    # Only put 64 bytes of the base64 signature per line:
+    sigSplit = []
+    while len(sig) > 0:
+        sigSplit.append(sig[:64])
+        sig = sig[64:]
+    sigFormatted = '\n'.join(sigSplit)
+
+    sigFormattedCopy = sigFormatted
+    formattedLength = len(sigFormattedCopy.replace('\n', ''))
+
+    if originalLength != formattedLength:
+        print("WARNING: signDescriptorDocument(): %s"
+              % "possible bad reformatting for signature.")
+        print("DEBUG: signDescriptorDocument(): original=%d formatted=%d"
+              % (originalLength, formattedLength))
+        print("DEBUG: original:\n%s\nformatted:\n%s"
+              % (sigCopy, sigFormatted))
+
+    sigWithHeaders = TOR_BEGIN_SIG + '\n' \
+                     + sigFormatted \
+                     + TOR_END_SIG + '\n'
+    return sigWithHeaders
+
+def generateDescriptors():
+    """Create keys, certs, signatures, documents and descriptors for an OR.
+
+    :returns:
+        A 3-tuple of strings:
+          - a ``@type [bridge-]extra-info`` descriptor,
+          - a ``@type [bridge-]server-descriptor``, and
+          - a ``@type network-status`` document
+       for a mock Tor relay/bridge.
+    """
+    ipv4 = randomIPv4()
+    ipv6 = randomIPv6()
+    port = randomPort()
+
+    vers = random.choice(SERVER_VERSIONS)
+    uptime = int(random.randint(1800, 63072000))
+    bandwidth = makeBandwidthLine()
+    timestamp = makeTimeStamp(variation=True, period=36)
+    protocols = makeProtocolsLine(vers)
+
+    idkey, (fingerprint, onionkey, signingkey) = makeOnionKeys()
+    idkey_private = getPEMPrivateKey(idkey)
+    idkey_digest = hashlib.sha1(idkey_private).digest()
+
+    fpr = convertToSpaceyFingerprint(fingerprint)
+
+    extrainfo_document = generateExtraInfo(fpr, timestamp, ipv4, port)
+    extrainfo_digest = hashlib.sha1(extrainfo_document).digest()
+    extrainfo_hexdigest = hashlib.sha1(extrainfo_document).hexdigest().upper()
+    extrainfo_sig = signDescriptorDigest(idkey, extrainfo_digest)
+    extrainfo_desc = extrainfo_document + extrainfo_sig
+
+    server = []
+    server.append("@purpose bridge")
+    server.append("router Unnamed %s %s 0 0" % (ipv4, port))
+    server.append("or-address [%s]:%s" % (ipv6, port))
+    server.append("platform Tor %s on Linux" % vers)
+    server.append("%s\npublished %s" % (protocols, timestamp))
+    server.append("%s" % makeFingerprintLine(fingerprint, vers))
+    server.append("uptime %s\n%s" % (uptime, bandwidth))
+    server.append("%s" % makeExtraInfoDigestLine(extrainfo_hexdigest, vers))
+    server.append("%s%s%s" % (onionkey, signingkey, makeHSDirLine(vers)))
+    server.append("contact Somebody <somebody@example.com>")
+    if nacl is not None:
+        server.append("ntor-onion-key %s"
+                      % binascii.b2a_base64(createNTORKey()))
+    server.append("reject *:*\nrouter-signature\n")
+    server_desc = '\n'.join(server)
+
+    server_desc_digest = hashlib.sha1(server_desc).digest()
+    netstatus_desc = generateNetstatus(idkey_digest, server_desc_digest,
+                                       timestamp, ipv4, port, ipv6=ipv6,
+                                       bandwidth_line=bandwidth)
+    server_desc += signDescriptorDigest(idkey, server_desc_digest)
+    return extrainfo_desc, server_desc, netstatus_desc
+
+def writeDescToFile(filename, descriptors):
+    """Open ``filename`` and write a string containing descriptors into it.
+
+    :param string filename: The name of the file to write to.
+    :param string descriptors: A giant string containing descriptors,
+        newlines, formatting, whatever is necessary to make it look like a
+        file tor would generate.
+    """
+    encoding = sys.getfilesystemencoding()
+    descript = descriptors.encode(encoding, 'replace')
+    try:
+        with open(filename, 'wb', encoding=encoding, errors='replace') as fh:
+            fh.write(descript)
+            fh.flush()
+    except (IOError, OSError) as err:
+        print("Failure while attempting to write descriptors to file '%s': %s"
+              % (filename, err.message))
+
+def create(count):
+    """Generate all types of descriptors and write them to files.
+
+    :param integer count: How many sets of descriptors to generate, i.e. how
+        many mock bridges/relays to create.
+    """
+    if nacl is None:
+        print("WARNING: Can't import PyNaCl. NTOR key generation is disabled.")
+    print("Generating %d bridge descriptors..." % int(count))
+
+    server_descriptors    = list()
+    netstatus_consensus   = list()
+    extrainfo_descriptors = list()
+    try:
+        for i in xrange(int(count)):
+            extrainfo, server, netstatus = generateDescriptors()
+            server_descriptors.append(server)
+            netstatus_consensus.append(netstatus)
+            extrainfo_descriptors.append(extrainfo)
+    except KeyboardInterrupt as keyint:
+        print("Received keyboard interrupt.")
+        print("Stopping descriptor creation and exiting.")
+        code = 1515
+    finally:
+        print("Writing descriptors to files...", end="")
+        descriptor_files = {
+            "networkstatus-bridges": ''.join(netstatus_consensus),
+            "bridge-descriptors": ''.join(server_descriptors),
+            "extra-infos": ''.join(extrainfo_descriptors)}
+        for fn, giantstring in descriptor_files.items():
+            writeDescToFile(fn, giantstring)
+        print("Done.")
+        code = 0
+        sys.exit(code)
+
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        usage()
-        sys.exit(0)
-
-    df = ''
-    sf = ''
-    ei = ''
-    count = int(sys.argv[1])
-    for i in xrange(count):
-        desc, info = generateDesc()
-        df += desc
-
-        sf += generateStatus(info)
-        ei += generateExtraInfo(binascii.b2a_hex(info[0]))
-
     try:
-        f = open("networkstatus-bridges", 'w')
-        f.write(sf)
-        f.close()
-    except:
-        print "Failed to open or write to status file"
+        parser = getArgParser()
+        options = parser.parse_args()
 
-    try:
-        f = open("bridge-descriptors", 'w')
-        f.write(df)
-        f.close()
-    except:
-        print "Failed to open or write to descriptor file"
+        if options.quiet:
+            print = lambda x: True
+        if options.version:
+            print("gen_bridge_descriptors-%s" % __version__)
+            sys.exit(0)
+        if options.descriptors and (options.descriptors > 0):
+            create(options.descriptors)
+        else:
+            sys.exit(parser.format_help())
 
-    try:
-        f = open("extra-infos", 'w')
-        f.write(ei)
-        f.close()
-    except:
-        print "Failed to open or write to extra-info file"
+    except Exception as error:
+        sys.exit(error)
