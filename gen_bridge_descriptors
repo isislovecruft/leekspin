@@ -22,6 +22,7 @@ import binascii
 import hashlib
 import ipaddr
 import math
+import os
 import sys
 import random
 import re
@@ -349,7 +350,7 @@ def createRSAKey(bits=1024):
 def createNTORKey():
     """Create a Curve25519 key."""
     if nacl is None:
-        raise NotImplemented
+        raise NotImplementedError
 
 def createKey(selfsign=True, digest='sha1'):
     """Create a set of public and private RSA keypairs and corresponding certs.
