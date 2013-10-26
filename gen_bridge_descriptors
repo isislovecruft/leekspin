@@ -752,10 +752,19 @@ def create(count):
         code = 1515
     finally:
         print("Writing descriptors to files...", end="")
+
+        cached = "cached-extrainfo.new"
         descriptor_files = {
             "networkstatus-bridges": ''.join(netstatus_consensus),
             "bridge-descriptors": ''.join(server_descriptors),
-            "extra-infos": ''.join(extrainfo_descriptors)}
+            "cached-extrainfo.new": ''.join(extrainfo_descriptors)}
+
+        if not os.path.isfile(cached):
+            with open(cached, 'wb') as fh:
+                fh.flush()
+        if os.path.isfile(cached)
+            os.rename(cached, "cached-extrainfo")
+
         for fn, giantstring in descriptor_files.items():
             writeDescToFile(fn, giantstring)
         print("Done.")
