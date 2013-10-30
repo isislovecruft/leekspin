@@ -13,6 +13,29 @@
 #             (c) 2013 The Tor Project, Inc.
 #______________________________________________________________________________
 
+"""gen_bridge_descriptors -- Generate fake Tor relay signed descriptors.
+
+** TODO: **
+
+Finish enough CFFI_ bindings for the newer PyNaCl_ (or enough of the
+SWIG_ bindings for the older pynacl_) to be able to emulate the following
+curvecp_ command (the ``curvecp*`` commands require libchloride_):
+
+    $ curvecpmakekey ntor-key
+    $ curvecpprintkey ntor-key > ntor-key.hex
+    $ python -c 'import binascii, sys; \
+        key_hex=open('./ntor-key.hex','rb').read();\
+        key_b64=binascii.b2a_base64(binascii.unhexlify(key_hex));\
+        sys.stdout.write(key_b64);'
+
+ .. _CFFI: https://cffi.readthedocs.org
+ .. _PyNaCl: https://github.com/seanlynch/pynacl
+ .. _SWIG: https://github.com/swig/swig
+ .. _pynacl: https://github.com/seanlynch/pynacl
+ .. _curvecp: http://curvecp.org/
+ .. _libchloride: https://github.com/jedisct1/libchloride
+"""
+
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import unicode_literals
@@ -122,6 +145,12 @@ def randomPort():
     return random.randint(1025, 65535)
 
 def getHexString(size):
+    """Get a capitalised hexidecimal string ``size`` bytes long.
+
+    :param integer size: The number of bytes in the returned string.
+    :rtype: string
+    :returns: A hex string.
+    """
     s = ""
     for i in xrange(size):
         s += random.choice("ABCDEF0123456789")
@@ -234,9 +263,9 @@ def makeFingerprintLine(fingerprint, version=None):
       | opt fingerprint D4BB C339 2560 1B7F 226E 133B A85F 72AF E734 0B29
       |
 
+    :param string fingerprint: A public key fingerprint in groups of four,
+         separated by spaces.
     :param string version: One of ``SERVER_VERSIONS``.
-    :param string timestamp: The timestamp, in seconds since Epoch, to record
-        in the 'published' line.
     :rtype: string
     :returns: An '@type [bridge-]server-descriptor' 'published' line.
     """
@@ -568,6 +597,16 @@ def generateNetstatus(idkey_digest, server_desc_digest, timestamp,
                       ipv4, orport, ipv6=None, dirport=None,
                       flags='Fast Guard Running Stable Valid',
                       bandwidth_line=None):
+    """Generate an ``@type networkwork-status`` document (unsigned).
+
+    DOCDOC
+
+    :param XXX idkey_digest: The SHA-1 digest of the router's public identity
+        key.
+    :param XXX server_desc_digest: The SHA-1 digest of the router's 
+        ``@type [bridge-]server-descriptor``, before the descriptor is signed.
+    :param XXX timestamp: 
+    """
 
     idkey_b64  = binascii.b2a_base64(idkey_digest)
     idb64      = str(idkey_b64).strip().rstrip('=========')
@@ -625,6 +664,12 @@ def signDescriptorDigest(key, descriptorDigest, digest='sha1'):
 
     see http://www.emc.com/collateral/white-papers/h11300-pkcs-1v2-2-rsa-cryptography-standard-wp.pdf
     for why this function is totally wrong.
+
+    :type key: :class:`OpenSSL.crypto.PKey`
+    :param key: An RSA private key.
+    :param string descriptorDigest: The raw SHA-1 digest of any descriptor
+        document.
+    :param string digest: The digest to use. (default: 'sha1')
     """
     sig = binascii.b2a_base64(OpenSSL.crypto.sign(key, descriptorDigest,
                                                   digest))
