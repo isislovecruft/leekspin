@@ -571,7 +571,7 @@ def generateExtraInfo(fingerprint, ts, ipv4, port):
     :returns: An extra-info document (unsigned).
     """
     extra = []
-    extra.append("extra-info Unnamed %s" % fingerprint)
+    extra.append("extra-info Unnamed %s" % fingerprint.replace(' ', ''))
     extra.append("published %s" % ts)
     extra.append("write-history %s (900 s)\n3188736,2226176,2866176" % ts)
     extra.append("read-history %s (900 s)\n3891200,2483200,2698240" % ts)
