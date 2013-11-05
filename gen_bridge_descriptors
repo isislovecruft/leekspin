@@ -589,7 +589,7 @@ def generateExtraInfo(fingerprint, ts, ipv4, port):
     extra.append("transport obfs2 %s:%d" % (ipv4, port + 2))
     extra.append("bridge-stats-end %s (86400 s)\nbridge-ips ca=8" % ts)
     extra.append("bridge-ip-versions v4=8,v6=0\nbridge-ip-transports <OR>=8")
-    extra.append("router-signature")
+    extra.append("router-signature\n")
 
     return '\n'.join(extra)
 
