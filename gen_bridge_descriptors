@@ -762,6 +762,14 @@ def generateDescriptors():
 
     fpr = convertToSpaceyFingerprint(fingerprint)
 
+    idkey_public = OpenSSL.crypto.dump_privatekey(PEM,
+                                                  SIDPCert.get_pubkey())
+    idkey_public = re.sub(OPENSSL_BEGIN_KEY, '', idkey_public)
+    idkey_public = re.sub(OPENSSL_END_KEY, '', idkey_public)
+    idkey_public = idkey_public.strip()
+    identity = binascii.b2a_base64(
+        hashlib.sha1(idkey_public).digest()).strip().strip('=======')
+
     extrainfo_document = generateExtraInfo(fpr, timestamp, ipv4, port)
     extrainfo_digest = hashlib.sha1(extrainfo_document).digest()
     extrainfo_hexdigest = hashlib.sha1(extrainfo_document).hexdigest().upper()
