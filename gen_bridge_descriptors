@@ -223,37 +223,26 @@ def makeProtocolsLine(version=None):
     return line
 
 def convertToSpaceyFingerprint(fingerprint):
-    """Convert a colon-delimited fingerprint to be space-delimited.
+    """Convert to a space-delimited 40 character fingerprint
 
-    Given a fingerprint with sets of two hexidecimal characters separated by
-    colons, for example a certificate or key fingerprint output from OpenSSL:
+    Given a 40 character string, usually the the SHA-1 hash of the
+    DER encoding of an ASN.1 RSA public key, such as:
       |
-      | 51:58:9E:8B:BF:5C:F6:5A:68:CB:6D:F4:C7:6F:98:C6:B2:02:69:45
+      | 72C2F0AE1C14F40ED37ED5F5434B64711A658E46
       |
 
     convert it to the following format:
       |
-      | 5158 9E8B BF5C F65A 68CB 6DF4 C76F 98C6 B202 6945
+      | 72C2 F0AE 1C14 F40E D37E D5F5 434B 6471 1A65 8E46
       |
 
-    :param string fingerprint: A 2-character colon-delimited hex fingerprint.
+    :param string fingerprint: A 40 character hex fingerprint.
     :rtype: string
     :returns: A 4-character space-delimited fingerprint.
     """
-    # The boolean of the non-equality is necessary because -1 is somehow
-    # truthy in Python…
-    check = lambda f: bool(f.find(':') != -1)
 
-    while True:
-        if check(fingerprint):
-            fingerprint = ''.join(fingerprint.split(':', 1))
-            if check(fingerprint):
-                fingerprint = ' '.join(fingerprint.split(':', 1))
-                continue
-            break
-        break
-
-    return fingerprint
+    assert len(fingerprint) == 40
+    return " ".join([fingerprint[i:i+4] for i in xrange(0, 40, 4)])
 
 def makeFingerprintLine(fingerprint, version=None):
     """Generate an appropriate [bridge-]server-descriptor 'fingerprint' line.
