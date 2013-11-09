@@ -623,7 +623,7 @@ def generateNetstatus(idkey_digest, server_desc_digest, timestamp,
 
     DOCDOC
 
-    :param XXX idkey_digest: The SHA-1 digest of the router's public identity
+    :param string idkey_digest: The SHA-1 digest of the router's public identity
         key.
     :param XXX server_desc_digest: The SHA-1 digest of the router's
         ``@type [bridge-]server-descriptor``, before the descriptor is signed.
