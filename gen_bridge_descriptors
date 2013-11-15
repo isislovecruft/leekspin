@@ -474,8 +474,14 @@ def createTLSCert(lifetime=None):
             lifetime -= 1
 
     cert = OpenSSL.crypto.X509()
-    cert.gmtime_adj_notBefore(0)        # Not valid before now
-    cert.gmtime_adj_notAfter(lifetime)
+
+    timeFormat = lambda x: time.strftime("%Y%m%d%H%M%SZ", x)
+    now = time.time()
+    before = time.gmtime(now)
+    after = time.gmtime(now + lifetime)
+    cert.set_notBefore(timeFormat(before))
+    cert.set_notAfter(timeFormat(after))
+
     return cert
 
 def createTLSLinkCert(lifetime=7200):
