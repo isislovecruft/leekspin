@@ -520,6 +520,38 @@ def getPEMPrivateKey(key):
 def makeOnionKeys(bridge=True, digest='sha1'):
     """Make all the keys and certificates necessary to fake an OR.
 
+    The encodings for the various key and descriptor digests needed are
+    described in dir-spec.txt and tor-spec.txt, the latter mostly for the
+    padding and encoding used in the creation of an OR's keys.
+
+    For the "router" line in a networkstatus document, the following encodings
+    are specified:
+
+    From dir-spec.txt, commit 36761c7d5, L1504-1512:
+      |
+      |                                 […] "Identity" is a hash of its
+      | identity key, encoded in base64, with trailing equals sign(s)
+      | removed.  "Digest" is a hash of its most recent descriptor as
+      | signed (that is, not including the signature), encoded in base64.
+      |
+
+    Before the hash digest of an OR's identity key is base64-encoded for
+    inclusion in a networkstatus document, the hash digest is created in the
+    following manner:
+
+    From tor-spec.txt, commit 36761c7d5, L109-110:
+      |
+      | When we refer to "the hash of a public key", we mean the SHA-1 hash of the
+      | DER encoding of an ASN.1 RSA public key (as specified in PKCS.1).
+      |
+
+    From tor-spec.txt, commit 36761c7d5, L785-787:
+      |
+      | The "legacy identity" and "identity fingerprint" fields are the SHA1
+      | hash of the PKCS#1 ASN1 encoding of the next onion router's identity
+      | (signing) key.  (See 0.3 above.)
+      |
+
     :param boolean bridge: If False, generate a server OR ID key, a signing
         key, and a TLS certificate/key pair. If True, generate a client ID key
         as well.
