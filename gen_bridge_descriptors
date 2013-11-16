@@ -754,7 +754,7 @@ def generateDescriptors():
  
     ident_digest = hashlib.sha1(idkey_public).digest()
     fingerprint = hashlib.sha1(idkey_public).hexdigest().upper()
-    fpr = convertToSpaceyFingerprint(ident_digest)
+    fpr = convertToSpaceyFingerprint(fingerprint)
 
     extrainfo_document = generateExtraInfo(fingerprint, timestamp, ipv4, port)
     extrainfo_digest = hashlib.sha1(extrainfo_document).digest()
