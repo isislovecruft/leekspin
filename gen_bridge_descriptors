@@ -759,7 +759,7 @@ def generateDescriptors():
     extrainfo_document = generateExtraInfo(fingerprint, timestamp, ipv4, port)
     extrainfo_digest = hashlib.sha1(extrainfo_document).digest()
     extrainfo_hexdigest = hashlib.sha1(extrainfo_document).hexdigest().upper()
-    extrainfo_sig = signDescriptorDigest(idkey, extrainfo_digest)
+    extrainfo_sig = signDescriptorDigest(SIDSKey, extrainfo_digest)
     extrainfo_desc = extrainfo_document + extrainfo_sig
 
     server = []
@@ -783,7 +783,7 @@ def generateDescriptors():
     netstatus_desc = generateNetstatus(ident_digest, server_desc_digest,
                                        timestamp, ipv4, port, ipv6=ipv6,
                                        bandwidth_line=bandwidth)
-    server_desc += signDescriptorDigest(idkey, server_desc_digest)
+    server_desc += signDescriptorDigest(SIDSKey, server_desc_digest)
     return extrainfo_desc, server_desc, netstatus_desc
 
 def writeDescToFile(filename, descriptors):
