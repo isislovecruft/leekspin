@@ -835,7 +835,7 @@ def create(count):
         print("Stopping descriptor creation and exiting.")
         code = 1515
     finally:
-        print("Writing descriptors to files...", end="")
+        print("\nWriting descriptors to files...", end="")
 
         cached = "cached-extrainfo.new"
         descriptor_files = {
@@ -868,7 +868,7 @@ if __name__ == "__main__":
         if options.descriptors and (options.descriptors > 0):
             create(options.descriptors)
         else:
-            sys.exit(parser.format_help())
+            raise SystemExit(parser.format_help())
 
     except Exception as error:
-        sys.exit(error)
+        raise SystemExit(error)
