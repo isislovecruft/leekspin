@@ -1,39 +1,30 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#
-# gen_bridge_descriptors
-# ----------------------
-# XXX describeme
-#
-# :authors: Matthew Finkel
-#           Isis Lovecruft <isis@torproject.org> 0xA3ADB67A2CDB8B35
-# :licence: distributed with BridgeDB, see included LICENSE file
-# :copyright: (c) 2013 Matthew Finkel
-#             (c) 2013 Isis Agora Lovecruft
-#             (c) 2013 The Tor Project, Inc.
-#______________________________________________________________________________
 
-"""gen_bridge_descriptors -- Generate fake Tor relay signed descriptors.
+"""Generate valid and signed descriptors for mocked Tor relays or bridges.
 
-** TODO: **
+.. todo:: Finish enough CFFI_ bindings for the newer PyNaCl_ (or enough of the
+    SWIG_ bindings for the older pynacl_) to be able to emulate the following
+    curvecp_ command (the ``curvecp*`` commands require libchloride_):
 
-Finish enough CFFI_ bindings for the newer PyNaCl_ (or enough of the
-SWIG_ bindings for the older pynacl_) to be able to emulate the following
-curvecp_ command (the ``curvecp*`` commands require libchloride_):
+        $ curvecpmakekey ntor-key
+        $ curvecpprintkey ntor-key > ntor-key.hex
+        $ python -c 'import binascii, sys; \
+            key_hex=open('./ntor-key.hex','rb').read();\
+            key_b64=binascii.b2a_base64(binascii.unhexlify(key_hex));\
+            sys.stdout.write(key_b64);'
 
-    $ curvecpmakekey ntor-key
-    $ curvecpprintkey ntor-key > ntor-key.hex
-    $ python -c 'import binascii, sys; \
-        key_hex=open('./ntor-key.hex','rb').read();\
-        key_b64=binascii.b2a_base64(binascii.unhexlify(key_hex));\
-        sys.stdout.write(key_b64);'
+    .. _CFFI: https://cffi.readthedocs.org
+    .. _PyNaCl: https://github.com/seanlynch/pynacl
+    .. _SWIG: https://github.com/swig/swig
+    .. _pynacl: https://github.com/seanlynch/pynacl
+    .. _curvecp: http://curvecp.org/
+    .. _libchloride: https://github.com/jedisct1/libchloride
 
- .. _CFFI: https://cffi.readthedocs.org
- .. _PyNaCl: https://github.com/seanlynch/pynacl
- .. _SWIG: https://github.com/swig/swig
- .. _pynacl: https://github.com/seanlynch/pynacl
- .. _curvecp: http://curvecp.org/
- .. _libchloride: https://github.com/jedisct1/libchloride
+.. authors:: Isis Lovecruft <isis@torproject.org> 0xA3ADB67A2CDB8B35
+             Matthew Finkel <sysrqb@torproject.org>
+.. licence:: distributed with BridgeDB, see included LICENSE file
+.. copyright:: (c) 2013 Matthew Finkel, Isis Lovecruft, The Tor Project, Inc.
 """
 
 from __future__ import print_function
@@ -666,27 +657,32 @@ def signDescriptorDigest(key, descriptorDigest, digest='sha1'):
     hexdigest. They both encode the the 'sha1' digest type if you check the
     `-asnparse` output (instead of `-raw -hexdump`).
 
-    ∃!isisⒶwintermute:(feature/9865 *$<>)~/code/torproject/bridgedb/scripts ∴ openssl rsautl -inkey eiprivkey -verify -in eisig1 -raw -hexdump
-    0000 - 00 01 ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-    0010 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-    0020 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-    0030 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-    0040 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-    0050 - ff ff ff ff ff ff ff ff-ff ff ff ff 00 30 21 30   .............0!0
-    0060 - 09 06 05 2b 0e 03 02 1a-05 00 04 14 42 25 41 fb   ...+........B%A.
-    0070 - 82 ef 11 f4 5f 2c 95 53-67 2d bb fe 7f c2 34 7f   ...._,.Sg-....4.
-    ∃!isisⒶwintermute:(feature/9865 *$<>)~/code/torproject/bridgedb/scripts ∴ openssl rsautl -inkey eiprivkey -verify -in eisig2 -raw -hexdump
-    0000 - 00 01 ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-    0010 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-    0020 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-    0030 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-    0040 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-    0050 - ff ff ff ff ff ff ff ff-ff ff ff ff 00 30 21 30   .............0!0
-    0060 - 09 06 05 2b 0e 03 02 1a-05 00 04 14 44 30 ab 90   ...+........D0..
-    0070 - 93 d1 08 21 df 87 c2 39-2a 04 1c a5 bb 34 44 cd   ...!...9*....4D.
+    .. command:: openssl rsautl -inkey eiprivkey -verify -in eisig1 -raw -hexdump
+      |
+      | 0000 - 00 01 ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0010 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0020 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0030 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0040 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0050 - ff ff ff ff ff ff ff ff-ff ff ff ff 00 30 21 30   .............0!0
+      | 0060 - 09 06 05 2b 0e 03 02 1a-05 00 04 14 42 25 41 fb   ...+........B%A.
+      | 0070 - 82 ef 11 f4 5f 2c 95 53-67 2d bb fe 7f c2 34 7f   ...._,.Sg-....4.
 
-    see http://www.emc.com/collateral/white-papers/h11300-pkcs-1v2-2-rsa-cryptography-standard-wp.pdf
-    for why this function is totally wrong.
+    .. command:: openssl rsautl -inkey eiprivkey -verify -in eisig2 -raw -hexdump
+      |
+      | 0000 - 00 01 ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0010 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0020 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0030 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0040 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0050 - ff ff ff ff ff ff ff ff-ff ff ff ff 00 30 21 30   .............0!0
+      | 0060 - 09 06 05 2b 0e 03 02 1a-05 00 04 14 44 30 ab 90   ...+........D0..
+      | 0070 - 93 d1 08 21 df 87 c2 39-2a 04 1c a5 bb 34 44 cd   ...!...9*....4D.
+
+    .. todo:: See the RSA PKCS_ Standard v2.2 for why this function is totally
+       wrong.
+
+    .. _PKCS: http://www.emc.com/collateral/white-papers/h11300-pkcs-1v2-2-rsa-cryptography-standard-wp.pdf
 
     :type key: :class:`OpenSSL.crypto.PKey`
     :param key: An RSA private key.
