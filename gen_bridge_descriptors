@@ -625,7 +625,7 @@ def generateNetstatus(idkey_digest, server_desc_digest, timestamp,
     idkey_b64  = binascii.b2a_base64(idkey_digest)
     idb64      = str(idkey_b64).strip().rstrip('==')
     server_b64 = binascii.b2a_base64(server_desc_digest)
-    srvb64     = str(server_b64).strip()
+    srvb64     = str(server_b64).strip().rstrip('==')
 
     if bandwidth_line is not None:
         bw = int(bandwidth_line.split()[-1]) / 1024  # The 'observed' value
