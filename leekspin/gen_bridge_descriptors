@@ -111,8 +111,8 @@ def getArgParser():
     infoargs.add_argument("-q", "--quiet", action="store_true",
                           help="don't print anything")
     verbargs.add_argument("--version", action="store_true",
-                          help="print the %s version and exit".format(
-                              parser.prog))
+                          help="print leekspin version and exit")
+
     group = parser.add_argument_group()
     group.title = "required arguments"
     group.add_argument("-n", "--descriptors", default=0,
