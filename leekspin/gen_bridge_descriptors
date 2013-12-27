@@ -52,13 +52,6 @@ except (ImportError, NameError) as error:
     print("This script requires pyOpenSSL>=0.13.0")
     raise SystemExit(error.message)
 try:
-    from bridgedb.parse import versions
-except (ImportError, NameError) as error:
-    print(error.message)
-    print("WARNING: Cannot import bridgedb package!",
-          "Generated descriptor content won't accurately reflect descriptor",
-          "information created by different Tor versions.", sep='\n\t')
-try:
     import nacl
     import nacl.secret
 except (ImportError, NameError, IOError):
