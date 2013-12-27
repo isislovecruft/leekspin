@@ -51,13 +51,12 @@ try:
 except (ImportError, NameError) as error:
     print("This script requires pyOpenSSL>=0.13.0")
     raise SystemExit(error.message)
-try:
-    import nacl
-    import nacl.secret
-except (ImportError, NameError, IOError):
-    nacl = secret = None
 
+import ntor
 import torversions
+
+#: If the pynacl was found by :attr:`leekspin.ntor.nacl`.
+nacl = ntor.nacl
 
 #: The version of this script
 __version__ = '0.3.0'
@@ -351,11 +350,6 @@ def createRSAKey(bits=1024):
     if not key.check():
         raise OpenSSLKeyGenError("Couldn't create new RSA 1024-bit key")
     return key
-
-def createNTORKey():
-    """Create a Curve25519 key."""
-    if nacl is None:
-        raise NotImplementedError
 
 def createKey(selfsign=True, digest='sha1'):
     """Create a set of public and private RSA keypairs and corresponding certs.
@@ -764,8 +758,9 @@ def generateDescriptors():
     server.append("%s%s%s" % (onionkey, signingkey, makeHSDirLine(vers)))
     server.append("contact Somebody <somebody@example.com>")
     if nacl is not None:
-        server.append("ntor-onion-key %s"
-                      % binascii.b2a_base64(createNTORKey()))
+        ntorkey = ntor.getNTORPublicKey()
+        if ntorkey is not None:
+            server.append("ntor-onion-key %s" % ntorkey)
     server.append("reject *:*\nrouter-signature\n")
     server_desc = '\n'.join(server)
 
