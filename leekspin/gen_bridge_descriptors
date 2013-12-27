@@ -64,6 +64,7 @@ try:
 except (ImportError, NameError, IOError):
     nacl = secret = None
 
+import torversions
 
 #: The version of this script
 __version__ = '0.3.0'
@@ -196,8 +197,8 @@ def shouldHaveOptPrefix(version):
     :rtype: bool
     :returns: True if we should include the 'opt ' prefix.
     """
-    changed_in  = versions.Version('0.2.4.1-alpha', package='tor')
-    our_version = versions.Version(version, package='tor')
+    changed_in  = torversions.Version('0.2.4.1-alpha', package='tor')
+    our_version = torversions.Version(version, package='tor')
     if our_version < changed_in:
         return True
     return False
