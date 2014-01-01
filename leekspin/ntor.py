@@ -83,9 +83,8 @@ def getNTORPublicKey(ntorSecretKey=None, base64=True):
              about the ntor-onion-key padding removal.
 
     :type ntorSecretKey: ``nacl.public.PrivateKey``
-    :param ntorSecretKey: A key created with
-                          :func:`leekspin.ntor.createNTORSecretKey`. If not
-                          given, a new one will be created automatically.
+    :param ntorSecretKey: A key created with :func:`createNTORSecretKey`. If
+                          not given, a new one will be created automatically.
     :param bool base64: If ``True``, return the base64-encoded NTOR public key
                         (with trailing newline removed).
     :raises: :exc:`NTORPublicKeyError` if there was an error retrieving the
