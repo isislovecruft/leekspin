@@ -52,38 +52,12 @@ except (ImportError, NameError) as error:
     print("This script requires pyOpenSSL>=0.13.0")
     raise SystemExit(error.message)
 
+import const
 import ntor
 import torversions
 
 #: If the pynacl was found by :attr:`leekspin.ntor.nacl`.
 nacl = ntor.nacl
-
-#: The version of this script
-__version__ = '0.3.0'
-
-#: The <major>.<minor>.<micro>.<rev> version numbers for tor, taken from the
-#: 'server-versions' line of a consensus file
-SERVER_VERSIONS = """0.2.2.39,0.2.3.24-rc,0.2.3.25,
-0.2.4.5-alpha,0.2.4.6-alpha,0.2.4.7-alpha,0.2.4.8-alpha,0.2.4.9-alpha,
-0.2.4.10-alpha,0.2.4.11-alpha,0.2.4.12-alpha,0.2.4.14-alpha,0.2.4.15-rc,
-0.2.4.16-rc,0.2.4.17-rc,0.2.5.1-alpha""".replace('\n', '').split(',')
-
-#: Strings found in PEM-encoded objects created by Tor
-TOR_BEGIN_KEY = "-----BEGIN RSA PUBLIC KEY-----"
-TOR_END_KEY   = "-----END RSA PUBLIC KEY-----"
-TOR_BEGIN_SK  = "-----BEGIN RSA PRIVATE KEY-----"
-TOR_END_SK    = "-----END RSA PRIVATE KEY-----"
-TOR_BEGIN_SIG = "-----BEGIN SIGNATURE-----"
-TOR_END_SIG   = "-----END SIGNATURE-----"
-
-#: Strings found in PEM-encoded objects created by OpenSSL
-OPENSSL_BEGIN_KEY  = "-----BEGIN PRIVATE KEY-----"
-OPENSSL_END_KEY    = "-----END PRIVATE KEY-----"
-OPENSSL_BEGIN_CERT = "-----BEGIN CERTIFICATE-----"
-OPENSSL_END_CERT   = "-----END CERTIFICATE-----"
-
-PEM = OpenSSL.crypto.FILETYPE_PEM
-ASN1 = OpenSSL.crypto.FILETYPE_ASN1
 
 
 class OpenSSLKeyGenError(Exception):
@@ -184,6 +158,7 @@ def shouldHaveOptPrefix(version):
         - 'fingerprint'
         - 'hidden-service-dir'
         - 'extra-info-digest'
+ASN1 = OpenSSL.crypto.FILETYPE_PEM
 
     :param string version: One of ``SERVER_VERSIONS``.
     :rtype: bool
@@ -701,9 +676,9 @@ def signDescriptorDigest(key, descriptorDigest, digest='sha1'):
         print("DEBUG: original:\n%s\nformatted:\n%s"
               % (sigCopy, sigFormatted))
 
-    sigWithHeaders = TOR_BEGIN_SIG + '\n' \
+    sigWithHeaders = const.TOR_BEGIN_SIG + '\n' \
                      + sigFormatted \
-                     + TOR_END_SIG + '\n'
+                     + const.TOR_END_SIG + '\n'
     return sigWithHeaders
 
 def generateDescriptors():
@@ -732,8 +707,8 @@ def generateDescriptors():
 
     idkey_public = OpenSSL.crypto.dump_privatekey(ASN1,
                                                   SIDPCert.get_pubkey())
-    idkey_public = re.sub(OPENSSL_BEGIN_KEY, '', idkey_public)
-    idkey_public = re.sub(OPENSSL_END_KEY, '', idkey_public)
+    idkey_public = re.sub(const.OPENSSL_BEGIN_KEY, '', idkey_public)
+    idkey_public = re.sub(const.OPENSSL_END_KEY, '', idkey_public)
     idkey_public = idkey_public.strip()
  
     ident_digest = hashlib.sha1(idkey_public).digest()
