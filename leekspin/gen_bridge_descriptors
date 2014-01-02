@@ -311,7 +311,7 @@ def generateExtraInfo(nickname, fingerprint, ts, ipv4, port):
     extra.append("dirreq-write-history %s (900 s)\n1024,0,2048" % ts)
     extra.append("dirreq-read-history %s (900 s)\n0,0,0" % ts)
     extra.append("geoip-db-digest %s\ngeoip6-db-digest %s"
-                 % (getHexString(40), getHexString(40)))
+                 % (util.getHexString(40), util.getHexString(40)))
     extra.append("dirreq-stats-end %s (86400 s)\ndirreq-v3-ips" % ts)
     extra.append("dirreq-v3-reqs\ndirreq-v3-resp")
     extra.append(
@@ -448,15 +448,15 @@ def generateDescriptors():
           - a ``@type network-status`` document
        for a mock Tor relay/bridge.
     """
-    ipv4 = randomIPv4()
-    ipv6 = randomIPv6()
-    port = randomPort()
+    ipv4 = util.randomIPv4()
+    ipv6 = util.randomIPv6()
+    port = util.randomPort()
 
     nick = generateNickname()
     vers = torversions.getRandomVersion()
     uptime = int(random.randint(1800, 63072000))
     bandwidth = makeBandwidthLine()
-    timestamp = makeTimeStamp(variation=True, period=36)
+    timestamp = util.makeTimeStamp(variation=True, period=36)
     protocols = makeProtocolsLine(vers)
 
     SIDSKey, SIDPCert, (onionkey, signingkey) = makeOnionKeys()
@@ -576,7 +576,7 @@ def create(count):
 
 if __name__ == "__main__":
     try:
-        parser = getArgParser()
+        parser = util.getArgParser()
         options = parser.parse_args()
 
         if options.quiet:
