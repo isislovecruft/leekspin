@@ -6,6 +6,17 @@ Portions of this module are directly taken from, or derived from,
 :api:twisted.python.compat, and are subject to the Twisted Matrix Labs
 copyright and license, in addition to the copyrights and license for the rest
 of this program.
+
+**Module Overview:**
+
+::
+
+  getRandomVersion - Get a random Tor version from SERVER_VERSIONS.
+  shouldHaveOptPrefix - Test if a Tor version should have the 'opt ' prefix.
+  Version
+   |_ base - Get the base version number (with prerelease).
+   +_ getPrefixedPrerelease - Get the prerelease string.
+
 """
 
 from __future__ import absolute_import
