@@ -176,11 +176,11 @@ _inf = _inf()
 class Version(object):
     """Holds, parses, and does comparison operations for version numbers.
 
-    :attr string major: The major version number.
-    :attr string minor: The minor version number.
-    :attr string micro: The micro version number.
-    :attr string prerelease: Sometime, another number, though often suffixed
-        with a `-`, `+`, or `#`.
+    :attr str major: The major version number.
+    :attr str minor: The minor version number.
+    :attr str micro: The micro version number.
+    :attr str prerelease: Sometimes another number, or ``alpha``/``rc2``/etc.,
+                          often suffixed with a ``-``, ``+``, or ``#``.
     """
 
     def __init__(self, version, package=None):
