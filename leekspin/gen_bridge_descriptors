@@ -237,7 +237,7 @@ def makeOnionKeys(bridge=True, digest='sha1'):
     """
     serverID = rsa.createKey(True)
     SIDSKey, SIDSCert, SIDPKey, SIDPCert = serverID
-    serverLinkCert = createTLSLinkCert()
+    serverLinkCert = tls.createTLSLinkCert()
     serverLinkCert.sign(SIDSKey, digest)
 
     if bridge:
@@ -247,7 +247,7 @@ def makeOnionKeys(bridge=True, digest='sha1'):
 
         # XXX I think we're missing some of the signatures
         #     see torspec.git/tor-spec.txt §4.2 on CERTS cells
-        clientLinkCert = createTLSLinkCert()
+        clientLinkCert = tls.createTLSLinkCert()
         clientLinkCert.sign(CIDSKey, digest)
     else:
         CIDSKey, CIDSCert, CIDPKey, CIDPCert = serverID
@@ -257,8 +257,8 @@ def makeOnionKeys(bridge=True, digest='sha1'):
     onion = rsa.createKey()
     onionSKey, onionSCert, onionPKey, onionPCert = onion
 
-    onionKeyString   = 'onion-key\n%s' % getPEMPublicKey(onionPCert)
-    signingKeyString = 'signing-key\n%s' % getPEMPublicKey(signPCert)
+    onionKeyString   = 'onion-key\n%s' % tls.getPublicKey(onionPCert)
+    signingKeyString = 'signing-key\n%s' % tls.getPublicKey(signPCert)
 
     return SIDSKey, SIDPCert, (onionKeyString, signingKeyString)
 
@@ -430,7 +430,7 @@ def generateDescriptors():
     protocols = makeProtocolsLine(vers)
 
     SIDSKey, SIDPCert, (onionkey, signingkey) = makeOnionKeys()
-    idkey_private = getPEMPrivateKey(SIDSKey)
+    idkey_private = tls.getPrivateKey(SIDSKey)
     idkey_digest = hashlib.sha1(idkey_private).digest()
 
     idkey_public = OpenSSL.crypto.dump_privatekey(ASN1,

@@ -1,0 +1,193 @@
+# -*- coding: utf-8 -*-
+
+"""rsa ― OpenSSL RSA key and certificate utilities, fingerprint representation
+conversions, and other cryptographic utilities related to Onion Relay RSA
+keys.
+
+**Module Overview:**
+
+"""
+
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
+import logging
+import random
+import re
+import time
+
+import OpenSSL.crypto
+
+import const
+import util
+
+
+PEM  = OpenSSL.crypto.FILETYPE_PEM
+
+
+class OpenSSLInvalidFormat(Exception):
+    """Raised if the specified file format is unsupported by OpenSSL."""
+
+
+def attachKey(key, cert, selfsign=True, digest='sha1', pem=False):
+    """Attach a key to a cert and optionally self-sign the cert.
+
+    :type key: :class:`OpenSSL.crypto.PKey`
+    :param key: A previously generated key, used to generate the other half of
+                the keypair.
+    :type cert: :class:`OpenSSL.crypto.X509`
+    :param cert: A TLS certificate without a public key attached to it, such
+                 as one created with :func:`createTLSCert`.
+    :param boolean selfsign: If True, use the **key** to self-sign the
+                             **cert**. Note that this will result in several
+                             nasty OpenSSL errors if you attempt to export the
+                             public key of a cert in order to create another
+                             cert which *only* holds the public
+                             key. (Otherwise, if you used the first cert in
+                             the following example, it contains both halves of
+                             the RSA keypair.) Do this instead:
+
+    .. codeblock:
+
+       secret_key = createRSAKey()
+       secret_cert = attachKey(secret_key, createTLSCert(selfsign=True))
+       public_key = secret_cert.get_pubkey()
+       public_cert = attachKey(public_key, createTLSCert, selfsign=False)
+
+    ..
+
+    :param string digest: The digest to use. Check your OpenSSL installation
+                          to see which are supported. We pretty much only care
+                          about 'sha1' and 'sha256' here.
+    :param boolean pem: If True, return a 3-tuple of PEM-encoded strings, one
+                        for each of (certificate, private_key, public_key),
+                        where 'certificate' is the original ``cert`` with the
+                        ``key`` attached, 'private_key' is the private RSA
+                        modulus, primes, and exponents exported from the
+                        'certificate', and 'public_key' is the public RSA
+                        modulus exported from the cert. NOTE: Using this when
+                        passing in a key with only the public RSA modulus (as
+                        described above) will result in nasty OpenSSL
+                        errors. Trust me, you do *not* want to try to parse
+                        OpenSSL's errors. (default: False)
+    :raises: An infinite, labyrinthine mire of non-Euclidean OpenSSL errors
+             with non-deterministic messages and self-referential errorcodes,
+             tangled upon itself in contempt of sanity, hope, and decent
+             software engineering practices.
+    :returns: If **pem** is True, then the values described there are
+              returned. Otherwise, returns the **cert** with the **key**
+              attached to it.
+    """
+    # Attach the key to the certificate
+    cert.set_pubkey(key)
+
+    if selfsign:
+        # Self-sign the cert with the key, using the specified hash digest
+        cert.sign(key, digest)
+
+    if pem:
+        certificate = OpenSSL.crypto.dump_certificate(PEM, cert)
+        private_key = OpenSSL.crypto.dump_privatekey(PEM, key)
+        public_key = OpenSSL.crypto.dump_privatekey(PEM, cert.get_pubkey())
+        return certificate, private_key, public_key
+    return cert
+
+def createTLSCert(lifetime=None):
+    """Create a TLS certificate.
+
+    :param integer lifetime: The time, in seconds, that the certificate should
+        remain valid for.
+    :rtype: :class:`OpenSSL.crypto.X509`
+    :returns: A certificate, unsigned, and without a key attached to it.
+    """
+    if not lifetime:
+        # see `router_initialize_tls_context()` in src/or/router.c
+        lifetime = 5 + random.randint(0, 361)
+        lifetime = lifetime * 24 * 3600
+        if int(random.getrandbits(1)):
+            lifetime -= 1
+
+    cert = OpenSSL.crypto.X509()
+
+    timeFormat = lambda x: time.strftime("%Y%m%d%H%M%SZ", x)
+    now = time.time()
+    before = time.gmtime(now)
+    after = time.gmtime(now + lifetime)
+    cert.set_notBefore(timeFormat(before))
+    cert.set_notAfter(timeFormat(after))
+
+    return cert
+
+def createTLSLinkCert(lifetime=7200):
+    """Create a certificate for the TLS link layer.
+
+    The TLS certificate used for the link layer between Tor relays, and
+    between clients and their bridges/guards, has a shorter lifetime than the
+    other certificates. Currently, these certs expire after two hours.
+
+    :param integer lifetime: The time, in seconds, that the certificate should
+        remain valid for.
+    :rtype: :class:`OpenSSL.crypto.X509`
+    :returns: A certificate, unsigned, and without a key attached to it.
+    """
+    cert = createTLSCert(lifetime)
+    cert.get_subject().CN = 'www.' + util.getHexString(16) + '.net'
+    cert.get_issuer().CN = 'www.' + util.getHexString(10) + '.com'
+    return cert
+
+def _getFormat(fileformat):
+    """Get the file format constant from OpenSSL.
+
+    :param str fileformat: One of ``'PEM'`` or ``'ASN1'``.
+    :raises OpenSSLInvalidFormat: If **fileformat** wasn't found.
+    :returns: ``OpenSSL.crypto.PEM`` or ``OpenSSL.crypto.ASN1`` respectively.
+    """
+    fileformat = 'FILETYPE_' + fileformat
+    fmt = getattr(OpenSSL.crypto, fileformat, None)
+    if fmt is not None:
+        return fmt
+    else:
+        raise OpenSSLInvalidFormat("Filetype format %r not found."% fileformat)
+
+def getPublicKey(cert, fileformat='PEM'):
+    """Retrieve the PEM public key, with Tor headers, from a certificate.
+
+    :type cert: :class:`OpenSSL.crypto.X509`
+    :param cert: A certificate with an attached key.
+    :param str fileformat: One of ``'PEM'`` or ``'ASN1'``. (default: ``'PEM'``)
+    :rtype: str
+    :returns: The public key in the specified **fileformat**.
+    """
+    fmt = _getFormat(fileformat)
+    publicKey = OpenSSL.crypto.dump_privatekey(fmt, cert.get_pubkey())
+    # It says "PRIVATE KEY" just because the stupid pyOpenSSL wrapper is
+    # braindamaged. You can check that it doesn't include the RSA private
+    # exponents and primes by substituting ``OpenSSL.crypto.FILETYPE_TEXT``
+    # for the above ``PEM``.
+    publicKey = re.sub(const.OPENSSL_BEGIN_KEY,
+                       const.TOR_BEGIN_KEY,
+                       publicKey)
+    publicKey = re.sub(const.OPENSSL_END_KEY,
+                       const.TOR_END_KEY,
+                       publicKey)
+    return publicKey
+
+def getPrivateKey(key, fileformat='PEM'):
+    """Retrieve the PEM public key, with Tor headers, from a certificate.
+
+    :type key: :class:`OpenSSL.crypto.PKey`
+    :param key: A certificate with an attached key.
+    :param str fileformat: One of ``'PEM'`` or ``'ASN1'``. (default: ``'PEM'``)
+    :rtype: str
+    :returns: The private key in the specified **fileformat**.
+    """
+    fmt = _getFormat(fileformat)
+    privateKey = OpenSSL.crypto.dump_privatekey(fmt, key)
+    privateKey = re.sub(const.OPENSSL_BEGIN_KEY,
+                        const.TOR_BEGIN_SK,
+                        privateKey)
+    privateKey = re.sub(const.OPENSSL_END_KEY,
+                        const.TOR_END_SK,
+                        privateKey)
+    return privateKey
