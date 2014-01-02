@@ -148,27 +148,8 @@ def makeTimeStamp(now=None, fmt=None, variation=False, period=None):
 
     return time.strftime(fmt, time.localtime(now))
 
-def shouldHaveOptPrefix(version):
-    """Returns true if a tor ``version`` should have the 'opt ' prefix.
-
-    In tor, up to and including, version 0.2.3.25, server-descriptors (bridge
-    or regular) prefixed several lines with 'opt '. For the 0.2.3.x series,
-    these lines were:
-        - 'protocols'
-        - 'fingerprint'
-        - 'hidden-service-dir'
-        - 'extra-info-digest'
 ASN1 = OpenSSL.crypto.FILETYPE_PEM
 
-    :param string version: One of ``SERVER_VERSIONS``.
-    :rtype: bool
-    :returns: True if we should include the 'opt ' prefix.
-    """
-    changed_in  = torversions.Version('0.2.4.1-alpha', package='tor')
-    our_version = torversions.Version(version, package='tor')
-    if our_version < changed_in:
-        return True
-    return False
 
 def makeProtocolsLine(version=None):
     """Generate an appropriate [bridge-]server-descriptor 'protocols' line.
@@ -178,7 +159,7 @@ def makeProtocolsLine(version=None):
     :returns: An '@type [bridge-]server-descriptor' 'protocols' line.
     """
     line = ''
-    if (version is not None) and shouldHaveOptPrefix(version):
+    if (version is not None) and torversions.shouldHaveOptPrefix(version):
         line += 'opt '
     line += 'protocols Link 1 2 Circuit 1'
     return line
@@ -220,7 +201,7 @@ def makeFingerprintLine(fingerprint, version=None):
     :returns: An '@type [bridge-]server-descriptor' 'published' line.
     """
     line = ''
-    if (version is not None) and shouldHaveOptPrefix(version):
+    if (version is not None) and torversions.shouldHaveOptPrefix(version):
         line += 'opt '
     line += 'fingerprint %s' % convertToSpaceyFingerprint(fingerprint)
     return line
@@ -294,7 +275,7 @@ def makeExtraInfoDigestLine(hexdigest, version):
         line.
     """
     line = ''
-    if (version is not None) and shouldHaveOptPrefix(version):
+    if (version is not None) and torversions.shouldHaveOptPrefix(version):
         line += 'opt '
     line += 'extra-info-digest %s' % hexdigest
     return line
@@ -308,7 +289,7 @@ def makeHSDirLine(version):
         line.
     """
     line = ''
-    if (version is not None) and shouldHaveOptPrefix(version):
+    if (version is not None) and torversions.shouldHaveOptPrefix(version):
         line += 'opt '
     line += 'hidden-service-dir'
     return line
@@ -695,7 +676,7 @@ def generateDescriptors():
     ipv6 = randomIPv6()
     port = randomPort()
 
-    vers = random.choice(SERVER_VERSIONS)
+    vers = torversions.getRandomVersion()
     uptime = int(random.randint(1800, 63072000))
     bandwidth = makeBandwidthLine()
     timestamp = makeTimeStamp(variation=True, period=36)
