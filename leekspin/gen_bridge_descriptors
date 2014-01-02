@@ -50,21 +50,22 @@ except (ImportError, NameError) as error:
     raise SystemExit(error.message)
 
 import const
+import crypto
 import ntor
+import rsa
+import tls
 import torversions
+import util
+
 
 #: If the pynacl was found by :attr:`leekspin.ntor.nacl`.
 nacl = ntor.nacl
 
 
-class OpenSSLKeyGenError(Exception):
-    """Raised when there is a problem generating a new key."""
 
 
 
-
-
-ASN1 = OpenSSL.crypto.FILETYPE_PEM
+_words = _createWordsForNicks()
 
 
 def makeProtocolsLine(version=None):
@@ -210,155 +211,6 @@ def makeHSDirLine(version):
     line += 'hidden-service-dir'
     return line
 
-def createRSAKey(bits=1024):
-    """Create a new RSA keypair.
-
-    :param integer bits: The bitlength of the keypair to generate.
-    :rtype: :class:`OpenSSL.crypto.PKey`
-    :returns: An RSA keypair of bitlength ``bits``.
-    """
-    key = OpenSSL.crypto.PKey()
-    key.generate_key(OpenSSL.crypto.TYPE_RSA, bits)
-    if not key.check():
-        raise OpenSSLKeyGenError("Couldn't create new RSA 1024-bit key")
-    return key
-
-def createKey(selfsign=True, digest='sha1'):
-    """Create a set of public and private RSA keypairs and corresponding certs.
-
-    :param boolean selfsign: If True, use the private key to sign the public
-        certificate (otherwise, the private key will only sign the private
-        certificate to which it is attached).
-    :param string digest: The digest to use. (default: 'sha1')
-    :rtype: 4-tuple
-    :returns: (private_key, private_cert, public_key, public_cert)
-    """
-    privateKey  = createRSAKey()
-    privateCert = attachKey(privateKey, createTLSCert())
-    publicKey   = privateCert.get_pubkey()
-    publicCert  = attachKey(publicKey, createTLSCert(), selfsign=False)
-
-    if selfsign:
-        # We already signed the publicCert with the publicKey, now we need to
-        # sign the publicCert with the privateKey
-        publicCert.sign(privateKey, digest)
-
-    return (privateKey, privateCert, publicKey, publicCert)
-
-def attachKey(key, cert, selfsign=True, digest='sha1', pem=False):
-    """Attach a key to a cert and optionally self-sign the cert.
-
-    :type key: :class:`OpenSSL.crypto.PKey`
-    :param key: A previously generated key, used to generate the other half of
-        the keypair.
-    :type cert: :class:`OpenSSL.crypto.X509`
-    :param cert: A TLS certificate without a public key attached to it, such
-       as one created with :func:`createTLSCert`.
-    :param boolean selfsign: If True, use the ``key`` to self-sign the
-        ``cert``. Note that this will result in several nasty OpenSSL errors
-        if you attempt to export the public key of a cert in order to create
-        another cert which *only* holds the public key. (Otherwise, if you
-        used the first cert in the following example, it contains both halves
-        of the RSA keypair.) Do this instead:
-
-    >>> secret_key = createRSAKey()
-    >>> secret_cert = attachKey(secret_key, createTLSCert(selfsign=True))
-    >>> public_key = secret_cert.get_pubkey()
-    >>> public_cert = attachKey(public_key, createTLSCert, selfsign=False)
-
-    :param string digest: The digest to use. Check your OpenSSL installation
-        to see which are supported. We pretty much only care about 'sha1' and
-        'sha256' here.
-    :param boolean pem: If True, return a 3-tuple of PEM-encoded strings, one
-        for each of (certificate, private_key, public_key), where
-        'certificate' is the original ``cert`` with the ``key`` attached,
-        'private_key' is the private RSA modulus, primes, and exponents
-        exported from the 'certificate', and 'public_key' is the public RSA
-        modulus exported from the cert. NOTE: Using this when passing in a key
-        with only the public RSA modulus (as described above) will result in
-        nasty OpenSSL errors. Trust me, you do *not* want to try to parse
-        OpenSSL's errors.
-    :raises: An infinite, labyrinthine mire of non-Euclidean OpenSSL errors
-        with non-deterministic messages and self-referential errorcodes,
-        tangled upon itself in contempt of sanity, hope, and decent software
-        engineering practices.
-    :returns: If ``pem`` is True, then the values described there are
-        returned. Otherwise, returns the ``cert`` with the ``key`` attached to
-        it.
-    """
-    # Attach the key to the certificate
-    cert.set_pubkey(key)
-
-    if selfsign:
-        # Self-sign the cert with the key, using the specified hash digest
-        cert.sign(key, digest)
-
-    if pem:
-        certificate = OpenSSL.crypto.dump_certificate(PEM, cert)
-        private_key = OpenSSL.crypto.dump_privatekey(PEM, key)
-        public_key = OpenSSL.crypto.dump_privatekey(PEM, cert.get_pubkey())
-        return certificate, private_key, public_key
-    return cert
-
-def createTLSCert(lifetime=None):
-    """Create a TLS certificate.
-
-    :param integer lifetime: The time, in seconds, that the certificate should
-        remain valid for.
-    :rtype: :class:`OpenSSL.crypto.X509`
-    :returns: A certificate, unsigned, and without a key attached to it.
-    """
-    if not lifetime:
-        # see `router_initialize_tls_context()` in src/or/router.c
-        lifetime = 5 + random.randint(0, 361)
-        lifetime = lifetime * 24 * 3600
-        if int(random.getrandbits(1)):
-            lifetime -= 1
-
-    cert = OpenSSL.crypto.X509()
-
-    timeFormat = lambda x: time.strftime("%Y%m%d%H%M%SZ", x)
-    now = time.time()
-    before = time.gmtime(now)
-    after = time.gmtime(now + lifetime)
-    cert.set_notBefore(timeFormat(before))
-    cert.set_notAfter(timeFormat(after))
-
-    return cert
-
-def createTLSLinkCert(lifetime=7200):
-    """Create a certificate for the TLS link layer.
-
-    The TLS certificate used for the link layer between Tor relays, and
-    between clients and their bridges/guards, has a shorter lifetime than the
-    other certificates. Currently, these certs expire after two hours.
-
-    :param integer lifetime: The time, in seconds, that the certificate should
-        remain valid for.
-    :rtype: :class:`OpenSSL.crypto.X509`
-    :returns: A certificate, unsigned, and without a key attached to it.
-    """
-    cert = createTLSCert(lifetime)
-    cert.get_subject().CN = 'www.' + getHexString(16) + '.net'
-    cert.get_issuer().CN = 'www.' + getHexString(10) + '.com'
-    return cert
-
-def getPEMPublicKey(cert):
-    publicKey = OpenSSL.crypto.dump_privatekey(PEM, cert.get_pubkey())
-    # It says "PRIVATE KEY" just because the stupid pyOpenSSL wrapper is
-    # braindamaged. You can check that it doesn't include the RSA private
-    # exponents and primes by substituting ``OpenSSL.crypto.FILETYPE_TEXT``
-    # for the above ``PEM``.
-    publicKey = re.sub(OPENSSL_BEGIN_KEY, TOR_BEGIN_KEY, publicKey)
-    publicKey = re.sub(OPENSSL_END_KEY, TOR_END_KEY, publicKey)
-    return publicKey
-
-def getPEMPrivateKey(key):
-    privateKey = OpenSSL.crypto.dump_privatekey(PEM, key)
-    privateKey = re.sub(OPENSSL_BEGIN_KEY, TOR_BEGIN_SK, privateKey)
-    privateKey = re.sub(OPENSSL_END_KEY, TOR_END_SK, privateKey)
-    return privateKey
-
 def makeOnionKeys(bridge=True, digest='sha1'):
     """Make all the keys and certificates necessary to fake an OR.
 
@@ -404,14 +256,14 @@ def makeOnionKeys(bridge=True, digest='sha1'):
        keys and certs in the this function. If you need more for some reason,
        this is definitely the thing you want to modify.
     """
-    serverID = createKey(True)
+    serverID = rsa.createKey(True)
     SIDSKey, SIDSCert, SIDPKey, SIDPCert = serverID
     serverLinkCert = createTLSLinkCert()
     serverLinkCert.sign(SIDSKey, digest)
 
     if bridge:
         # For a bridge, a "client" ID key is used to generate the fingerprint
-        clientID = createKey(True)
+        clientID = rsa.createKey(True)
         CIDSKey, CIDSCert, CIDPKey, CIDPCert = clientID
 
         # XXX I think we're missing some of the signatures
@@ -421,9 +273,9 @@ def makeOnionKeys(bridge=True, digest='sha1'):
     else:
         CIDSKey, CIDSCert, CIDPKey, CIDPCert = serverID
 
-    signing = createKey()
+    signing = rsa.createKey()
     signSKey, signSCert, signPKey, signPCert = signing
-    onion = createKey()
+    onion = rsa.createKey()
     onionSKey, onionSCert, onionPKey, onionPCert = onion
 
     onionKeyString   = 'onion-key\n%s' % getPEMPublicKey(onionPCert)
