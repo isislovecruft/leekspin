@@ -463,15 +463,15 @@ def generateDescriptors():
     idkey_private = tls.getPrivateKey(SIDSKey)
     idkey_digest = hashlib.sha1(idkey_private).digest()
 
-    idkey_public = OpenSSL.crypto.dump_privatekey(ASN1,
+    idkey_public = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_ASN1,
                                                   SIDPCert.get_pubkey())
     idkey_public = re.sub(const.OPENSSL_BEGIN_KEY, '', idkey_public)
     idkey_public = re.sub(const.OPENSSL_END_KEY, '', idkey_public)
     idkey_public = idkey_public.strip()
- 
+
     ident_digest = hashlib.sha1(idkey_public).digest()
     fingerprint = hashlib.sha1(idkey_public).hexdigest().upper()
-    fpr = convertToSpaceyFingerprint(fingerprint)
+    fpr = crypto.convertToSpaceyFingerprint(fingerprint)
 
     extrainfo_document = generateExtraInfo(nick, fingerprint,
                                            timestamp, ipv4, port)
