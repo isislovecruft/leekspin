@@ -35,6 +35,7 @@ import hashlib
 import ipaddr
 import math
 import os
+import string
 import sys
 import random
 import re
@@ -62,8 +63,25 @@ import util
 nacl = ntor.nacl
 
 
+def _createWordsForNicks():
+    """Create a list of words used to generate random OR nicknames."""
+    dictfn = '/usr/share/dict/words'
+    allowedChars = string.letters + string.digits
+    wordlist = []
+    if os.path.isfile(dictfn) and os.access(dictfn, os.R_OK):
+        try:
+            dictfh = open(dictfn)
+            rawdict = dictfh.readlines()
+        except (OSError, IOError):
+            print("error opening dictionary")
+            return []
 
-
+        for word in rawdict:
+            for char in word:
+                if char not in allowedChars:
+                    word = word.replace(char, '').capitalize()
+            wordlist.append(word)
+    return wordlist
 
 _words = _createWordsForNicks()
 
@@ -81,6 +99,15 @@ def makeProtocolsLine(version=None):
     line += 'protocols Link 1 2 Circuit 1'
     return line
 
+def generateNickname():
+    nickname = []
+    def pickWord():
+        return _words[random.randint(0, len(_words))]
+    for _ in xrange(2):
+        nickname.append(pickWord())
+    nickname = ''.join([n for n in nickname])
+    print("%s " % nickname, end='')
+    return nickname
 
 def makeFingerprintLine(fingerprint, version=None):
     """Generate an appropriate [bridge-]server-descriptor 'fingerprint' line.
@@ -262,21 +289,22 @@ def makeOnionKeys(bridge=True, digest='sha1'):
 
     return SIDSKey, SIDPCert, (onionKeyString, signingKeyString)
 
-def generateExtraInfo(fingerprint, ts, ipv4, port):
+def generateExtraInfo(nickname, fingerprint, ts, ipv4, port):
     """Create an OR extra-info document.
 
     See §2.2 "Extra-info documents" in torspec.git/dir-spec.txt.
 
-    :param string fingerprint: A space-separated, hex-encoded, SHA-1 digest of
+    :param str nickname: The router's nickname.
+    :param str fingerprint: A space-separated, hex-encoded, SHA-1 digest of
         the OR's private identity key. See :func:`convertToSpaceyFingerprint`.
-    :param string ts: An ISO-8601 timestamp. See :func:`makeTimeStamp`.
-    :param string ipv4: An IPv4 address.
-    :param string port: The OR's ORPort.
-    :rtype: string
+    :param str ts: An ISO-8601 timestamp. See :func:`makeTimeStamp`.
+    :param str ipv4: An IPv4 address.
+    :param str port: The OR's ORPort.
+    :rtype: str
     :returns: An extra-info document (unsigned).
     """
     extra = []
-    extra.append("extra-info Unnamed %s" % fingerprint)
+    extra.append("extra-info %s %s" % (nickname, fingerprint))
     extra.append("published %s" % ts)
     extra.append("write-history %s (900 s)\n3188736,2226176,2866176" % ts)
     extra.append("read-history %s (900 s)\n3891200,2483200,2698240" % ts)
@@ -298,7 +326,7 @@ def generateExtraInfo(fingerprint, ts, ipv4, port):
 
     return '\n'.join(extra)
 
-def generateNetstatus(idkey_digest, server_desc_digest, timestamp,
+def generateNetstatus(nickname, idkey_digest, server_desc_digest, timestamp,
                       ipv4, orport, ipv6=None, dirport=None,
                       flags='Fast Guard Running Stable Valid',
                       bandwidth_line=None):
@@ -306,6 +334,7 @@ def generateNetstatus(idkey_digest, server_desc_digest, timestamp,
 
     DOCDOC
 
+    :param str nickname: The router's nickname.
     :param string idkey_digest: The SHA-1 digest of the router's public identity
         key.
     :param XXX server_desc_digest: The SHA-1 digest of the router's
@@ -323,8 +352,8 @@ def generateNetstatus(idkey_digest, server_desc_digest, timestamp,
     dirport = dirport if dirport else 0
 
     status = []
-    status.append("r Unnamed %s %s %s %s %s %d" % (idb64, srvb64, timestamp,
-                                                   ipv4, orport, dirport))
+    status.append("r %s %s %s %s %s %s %d" % (nickname, idb64, srvb64, timestamp,
+                                              ipv4, orport, dirport))
     if ipv6 is not None:
         status.append("a [%s]:%s" % (ipv6, orport))
     status.append("s %s\nw Bandwidth=%s\np reject 1-65535\n" % (flags, bw))
@@ -423,6 +452,7 @@ def generateDescriptors():
     ipv6 = randomIPv6()
     port = randomPort()
 
+    nick = generateNickname()
     vers = torversions.getRandomVersion()
     uptime = int(random.randint(1800, 63072000))
     bandwidth = makeBandwidthLine()
@@ -443,7 +473,8 @@ def generateDescriptors():
     fingerprint = hashlib.sha1(idkey_public).hexdigest().upper()
     fpr = convertToSpaceyFingerprint(fingerprint)
 
-    extrainfo_document = generateExtraInfo(fingerprint, timestamp, ipv4, port)
+    extrainfo_document = generateExtraInfo(nick, fingerprint,
+                                           timestamp, ipv4, port)
     extrainfo_digest = hashlib.sha1(extrainfo_document).digest()
     extrainfo_hexdigest = hashlib.sha1(extrainfo_document).hexdigest().upper()
     extrainfo_sig = signDescriptorDigest(SIDSKey, extrainfo_digest)
@@ -451,7 +482,7 @@ def generateDescriptors():
 
     server = []
     server.append("@purpose bridge")
-    server.append("router Unnamed %s %s 0 0" % (ipv4, port))
+    server.append("router %s %s %s 0 0" % (nick, ipv4, port))
     server.append("or-address [%s]:%s" % (ipv6, port))
     server.append("platform Tor %s on Linux" % vers)
     server.append("%s\npublished %s" % (protocols, timestamp))
@@ -468,7 +499,7 @@ def generateDescriptors():
     server_desc = '\n'.join(server)
 
     server_desc_digest = hashlib.sha1(server_desc).digest()
-    netstatus_desc = generateNetstatus(ident_digest, server_desc_digest,
+    netstatus_desc = generateNetstatus(nick, ident_digest, server_desc_digest,
                                        timestamp, ipv4, port, ipv6=ipv6,
                                        bandwidth_line=bandwidth)
     server_desc += signDescriptorDigest(SIDSKey, server_desc_digest)
@@ -501,13 +532,13 @@ def create(count):
     if nacl is None:
         print("WARNING: Can't import PyNaCl. NTOR key generation is disabled.")
     print("Generating %d bridge descriptors..." % int(count))
+    print("Generated router nicknames:")
 
     server_descriptors    = list()
     netstatus_consensus   = list()
     extrainfo_descriptors = list()
     try:
         for i in xrange(int(count)):
-            print(".", end='')
             try:
                 extrainfo, server, netstatus = generateDescriptors()
             except Exception as error:
