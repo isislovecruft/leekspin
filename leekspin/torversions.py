@@ -182,7 +182,6 @@ class Version(object):
     :attr str prerelease: Sometimes another number, or ``alpha``/``rc2``/etc.,
                           often suffixed with a ``-``, ``+``, or ``#``.
     """
-
     def __init__(self, version, package=None):
         """Create a version object.
 
