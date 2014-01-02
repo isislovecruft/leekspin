@@ -235,9 +235,9 @@ class Version(object):
     def base(self):
         """Get the base version number (with prerelease).
 
-        :rtype: string
+        :rtype: str
         :returns: A version number, without the package/program name, and with
-            the prefix (if available). For example: '0.2.5.1-alpha'.
+                  the prefix (if available). For example: ``'0.2.5.1-alpha'``.
         """
         prerelease = getPrefixedPrerelease()
         return '%d.%d.%d%s' % (self.major, self.minor, self.micro, prerelease)
