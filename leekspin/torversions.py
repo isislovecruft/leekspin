@@ -213,8 +213,7 @@ class Version(object):
                                "tor".
         """
         if version.find('.') == -1:
-            print("Version.__init__(): %r doesn't look like a version string!"
-                  % version.__repr__())
+            raise InvalidVersion("%r isn't a valid version string!" % version)
 
         major, minor, micro, prerelease = ['' for x in xrange(4)]
 
