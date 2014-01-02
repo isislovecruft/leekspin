@@ -582,7 +582,7 @@ if __name__ == "__main__":
         if options.quiet:
             print = lambda x: True
         if options.version:
-            print("gen_bridge_descriptors-%s" % __version__)
+            print("gen_bridge_descriptors-%s" % parser.version)
             sys.exit(0)
         if options.descriptors and (options.descriptors > 0):
             create(options.descriptors)
