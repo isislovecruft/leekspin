@@ -24,6 +24,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import random
 import sys
 
 
@@ -118,6 +119,38 @@ def _comparable(klass):
     klass.__eq__ = __eq__
     klass.__ne__ = __ne__
     return klass
+
+def getRandomVersion():
+    """Get a random Tor version from ``server-versions`` in the consensus.
+
+    :rtype: str
+    :returns: One of ``SERVER_VERSIONS``.
+    """
+    vers = random.choice(SERVER_VERSIONS)
+    return vers
+
+def shouldHaveOptPrefix(version):
+    """Returns true if descriptor lines for a Tor **version** should be prefixed
+    with ``'opt '``.
+
+    In tor, up to and including, version 0.2.3.25, server-descriptors (bridge
+    or regular) prefixed several lines with ``'opt '``. For the 0.2.3.x
+    series, these lines were:
+        - 'protocols'
+        - 'fingerprint'
+        - 'hidden-service-dir'
+        - 'extra-info-digest'
+
+    :param str version: One of ``SERVER_VERSIONS``.
+    :rtype: bool
+    :returns: True if we should include the ``'opt '`` prefix.
+    """
+    changed_in  = Version('0.2.4.1-alpha', package='tor')
+    our_version = Version(version, package='tor')
+    if our_version < changed_in:
+        return True
+    return False
+
 
 @_comparable
 class _inf(object):
