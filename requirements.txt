@@ -1,0 +1,3 @@
+ipaddr==2.1.10
+git://git@github.com:isislovecruft/pynacl.git#nacl==0.1.0
+PyOpenSSL==0.13.1
