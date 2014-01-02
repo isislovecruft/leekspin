@@ -59,6 +59,8 @@ else:
 class IncomparableVersions(TypeError):
     """Two versions could not be compared."""
 
+class InvalidVersion(ValueError):
+    """Invalid version string."""
 
 @comparable
 class _inf(object):
