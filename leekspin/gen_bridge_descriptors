@@ -81,27 +81,6 @@ def makeProtocolsLine(version=None):
     line += 'protocols Link 1 2 Circuit 1'
     return line
 
-def convertToSpaceyFingerprint(fingerprint):
-    """Convert to a space-delimited 40 character fingerprint
-
-    Given a 40 character string, usually the the SHA-1 hash of the
-    DER encoding of an ASN.1 RSA public key, such as:
-      |
-      | 72C2F0AE1C14F40ED37ED5F5434B64711A658E46
-      |
-
-    convert it to the following format:
-      |
-      | 72C2 F0AE 1C14 F40E D37E D5F5 434B 6471 1A65 8E46
-      |
-
-    :param string fingerprint: A 40 character hex fingerprint.
-    :rtype: string
-    :returns: A 4-character space-delimited fingerprint.
-    """
-
-    assert len(fingerprint) == 40
-    return " ".join([fingerprint[i:i+4] for i in xrange(0, 40, 4)])
 
 def makeFingerprintLine(fingerprint, version=None):
     """Generate an appropriate [bridge-]server-descriptor 'fingerprint' line.
@@ -120,7 +99,7 @@ def makeFingerprintLine(fingerprint, version=None):
     line = ''
     if (version is not None) and torversions.shouldHaveOptPrefix(version):
         line += 'opt '
-    line += 'fingerprint %s' % convertToSpaceyFingerprint(fingerprint)
+    line += 'fingerprint %s' % crypto.convertToSpaceyFingerprint(fingerprint)
     return line
 
 def makeBandwidthLine(variance=30):
