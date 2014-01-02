@@ -215,7 +215,10 @@ class Version(object):
         if version.find('.') == -1:
             raise InvalidVersion("%r isn't a valid version string!" % version)
 
-        major, minor, micro, prerelease = ['' for x in xrange(4)]
+        self.major = ''
+        self.minor = ''
+        self.micro = ''
+        self.prerelease = ''
 
         components = version.split('.')
         if len(components) > 0:
@@ -227,8 +230,7 @@ class Version(object):
             except IndexError:
                 pass
 
-        if package:
-            self.package = package
+        self.package = package if package is not None else ''
 
     def base(self):
         """Get the base version number (with prerelease).
