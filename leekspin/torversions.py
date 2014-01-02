@@ -246,14 +246,16 @@ class Version(object):
     def getPrefixedPrerelease(self, separator='.'):
         """Get the prerelease string, prefixed by the separator ``prefix``.
 
-        :param string separator: The separator to use between the rest of the
-            version string and the :attr:`prerelease` string.
-        :rtype: string
-        :returns: The separator plus the ``prefix``, i.e. '.1-alpha'.
+        :param str separator: The separator to use between the rest of the
+                              version string and the **prerelease** string.
+                              (default: '.')
+        :rtype: str
+        :returns: The **separator** plus the ``Version.prefix``, for example
+                  ``'.1-alpha'``.
         """
-        pre = ''
+        prefixed = ''
         if self.prerelease is not None:
-            pre = prefix + self.prerelease
+            prefixed = separator + self.prerelease
         return pre
 
     def __repr__(self):
@@ -264,11 +266,12 @@ class Version(object):
 
     def __str__(self):
         """Return the package name and version in string form, i.e.
-        'tor-0.2.24'.
+        ``'tor-0.2.24'``.
         """
         if self.package:
             versionstr = str(self.package) + '-'
         versionstr += self.base()
+        return versionstr
 
     def __cmp__(self, other):
         """Compare two versions, considering major versions, minor versions,
@@ -280,7 +283,7 @@ class Version(object):
 
         :type other: :class:`Version`
         :param other: Another version.
-        :raise IncomparableVersions: when the package names of the versions
+        :raise IncomparableVersions: When the package names of the versions
                                      differ.
         :returns: NotImplemented when the other object is not a Version, or
             one of -1, 0, or 1.
