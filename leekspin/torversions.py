@@ -62,34 +62,14 @@ class IncomparableVersions(TypeError):
 class InvalidVersion(ValueError):
     """Invalid version string."""
 
-@comparable
-class _inf(object):
-    """An object that is bigger than all other objects."""
-    def __cmp__(self, other):
-        """Compare another object with this infinite one.
 
-        If the other object is infinite, it wins. Otherwise, this class is
-        always the winner.
-
-        :param other: Another object.
-        :rtype: int
-        :returns: 0 if other is inf, 1 otherwise.
-        """
-        if other is _inf:
-            return 0
-        return 1
-
-_inf = _inf()
-
-
-def comparable(klass):
+def _comparable(klass):
     """Class decorator that ensures support for the special C{__cmp__} method.
 
     On Python 2 this does nothing.
 
     On Python 3, C{__eq__}, C{__lt__}, etc. methods are added to the class,
     relying on C{__cmp__} to implement their comparisons.
-
     """
     # On Python 2, __cmp__ will just work, so no need to add extra methods:
     if not _PY3:
@@ -139,8 +119,27 @@ def comparable(klass):
     klass.__ne__ = __ne__
     return klass
 
+@_comparable
+class _inf(object):
+    """An object that is bigger than all other objects."""
+    def __cmp__(self, other):
+        """Compare another object with this infinite one.
 
-@comparable
+        If the other object is infinite, it wins. Otherwise, this class is
+        always the winner.
+
+        :param other: Another object.
+        :rtype: int
+        :returns: 0 if other is inf, 1 otherwise.
+        """
+        if other is _inf:
+            return 0
+        return 1
+
+_inf = _inf()
+
+
+@_comparable
 class Version(object):
     """Holds, parses, and does comparison operations for version numbers.
 
