@@ -186,11 +186,31 @@ class Version(object):
         """Create a version object.
 
         Comparisons may be computed between instances of :class:`Version`s.
+        This is modified from the original Twisted class because Tor's
+        versioning system uses four integers, separated by ``'.'``s, so the
+        ``prerelease`` attribute and all methods using it accomodate for Tor's
+        version strings (though the standard
+        ``<major>.<minor>.<micro>-<prerelease>`` version format will work just
+        the same as it does with the unmodified Twisted class).
+
+        >>> ver = torversions.Version('0.2.5.1-alpha', 'tor')
+        >>> ver.base
+        0.2.5.1-alpha
+        >>> str(ver)
+        tor-0.2.5.1-alpha
+        >>> ver.micro
+        5
+        >>> ver.prerelease
+        1-alpha
+        >>> ver.package
+        tor
+
 
         :param string version: One of ``SERVER_VERSIONS``.
         :param string package: The package or program which we are creating a
-            version number for, i.e. for "tor-0.2.5.1-alpha" the ``package``
-            would be "tor".
+                               version number for, i.e. for
+                               "tor-0.2.5.1-alpha" the **package** would be
+                               "tor".
         """
         if version.find('.') == -1:
             print("Version.__init__(): %r doesn't look like a version string!"
