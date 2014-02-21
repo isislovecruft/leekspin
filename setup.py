@@ -13,8 +13,7 @@
 from __future__ import print_function
 
 import setuptools
-
-from glob import glob
+import os
 
 # setup automatic versioning (see top-level versioneer.py file):
 import versioneer
@@ -36,6 +35,10 @@ versioneer.versionfile_build = 'leekspin/_version.py'
 versioneer.tag_prefix = 'leekspin-'
 # source tarballs should unpack to a directory like 'leekspin-6.6.6'
 versioneer.parentdir_prefix = 'leekspin-'
+
+# Use the ReStructured Text from the README file for PyPI:
+with open(os.path.join(os.getcwd(), 'README')) as readme:
+    long_description = readme.read()
 
 
 def get_cmdclass():
@@ -111,17 +114,22 @@ class runTests(setuptools.Command):
 
 #requires, deplinks = get_requirements()
 
+download_urls='''\
+https://github.com/isislovecruft/leekspin.git
+https://gitweb.torproject.org/user/isis/leekspin.git'''
+
 setuptools.setup(
     name='leekspin',
     version=versioneer.get_version(),
     description='An Onion Router descriptor generator',
+    long_description=long_description,
     license="MIT license",
     author='isis & sysrqb',
     author_email='isis@torproject.org',
     maintainer='isis',
     maintainer_email='isis@torproject.org 0xA3ADB67A2CDB8B35',
     url='https://www.torproject.org',
-    download_url='https://gitweb.torproject.org/user/isis/leekspin.git',
+    download_url=download_urls,
     packages=['leekspin'],
     scripts=['scripts/generate-OR-descriptors'],
     extras_require={'ntor': ["nacl==0.1.0"],
