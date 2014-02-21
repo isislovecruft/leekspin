@@ -48,5 +48,6 @@ coverage:
 	-coverage run $(which trial) ./leekspin/test/test_* && coverage report && coverage html
 
 upload:
-	python setup.py sdist bdist_egg bdist_wheel upload --sign
-
+	python setup.py bdist_egg upload --sign
+	python setup.py bdist_wheel upload --sign
+	python setup.py sdist upload --sign
