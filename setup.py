@@ -114,6 +114,10 @@ class runTests(setuptools.Command):
 
 #requires, deplinks = get_requirements()
 
+download_urls='''\
+https://github.com/isislovecruft/leekspin.git
+https://gitweb.torproject.org/user/isis/leekspin.git'''
+
 setuptools.setup(
     name='leekspin',
     version=versioneer.get_version(),
@@ -125,7 +129,7 @@ setuptools.setup(
     maintainer='isis',
     maintainer_email='isis@torproject.org 0xA3ADB67A2CDB8B35',
     url='https://www.torproject.org',
-    download_url='https://gitweb.torproject.org/user/isis/leekspin.git',
+    download_url=download_urls,
     packages=['leekspin'],
     scripts=['scripts/generate-OR-descriptors'],
     extras_require={'ntor': ["nacl==0.1.0"],
