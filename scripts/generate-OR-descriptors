@@ -23,8 +23,10 @@
 
 .. authors:: Isis Lovecruft <isis@torproject.org> 0xA3ADB67A2CDB8B35
              Matthew Finkel <sysrqb@torproject.org>
-.. licence:: distributed with BridgeDB, see included LICENSE file
-.. copyright:: (c) 2013 Matthew Finkel, Isis Lovecruft, The Tor Project, Inc.
+.. licence:: see LICENSE file for licensing details
+.. copyright:: (c) 2013-2014 The Tor Project, Inc.
+               (c) 2013-2014 Isis Lovecruft
+               (c) 2013-2014 Matthew Finkel
 """
 
 from __future__ import print_function
