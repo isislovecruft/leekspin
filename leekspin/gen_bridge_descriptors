@@ -99,15 +99,44 @@ def makeProtocolsLine(version=None):
     line += 'protocols Link 1 2 Circuit 1'
     return line
 
-def generateNickname():
-    nickname = []
-    def pickWord():
-        return _words[random.randint(0, len(_words))]
-    for _ in xrange(2):
-        nickname.append(pickWord())
-    nickname = ''.join([n for n in nickname])
-    print("%s " % nickname, end='')
-    return nickname
+
+MAX_INDEX_WORDS     = len(_words) - 1
+NICKNAME_LENGTH_MAX = 19
+NICKNAME_LENGTH_MIN = 1
+NICKNAME_LENGTH_PREF_MIN = 10
+
+def checkWordLength(word, minlength=NICKNAME_LENGTH_MIN, maxlength=NICKNAME_LENGTH_MAX):
+    """Returns ``True`` if **word** is an acceptable length."""
+    if (int(minlength) < 0) or (int(maxlength) <= 0):
+        return False
+    if (int(minlength) <= len(str(word)) <= maxlength):
+        return True
+    return False
+
+def getCharsNeeded(word, minlength, maxlength):
+    minNeeded  = minlength - len(str(word))
+    maxNeeded  = maxlength - len(str(word))
+    return minNeeded, maxNeeded
+
+def getRandomWord(minlength=NICKNAME_LENGTH_MIN, maxlength=NICKNAME_LENGTH_MAX):
+    pick = lambda: _words[random.randint(0, MAX_INDEX_WORDS)]
+    picked = pick()
+
+    while not checkWordLength(picked, minlength, maxlength):
+        picked = pick()
+    return picked
+
+def generateNickname(maxlength=NICKNAME_LENGTH_MAX):
+    """Generate a random alphanumeric nickname conforming to the specified length."""
+    nickname = getRandomWord(NICKNAME_LENGTH_MIN, maxlength)
+    minNeeded, maxNeeded = getCharsNeeded(nickname, NICKNAME_LENGTH_PREF_MIN, maxlength)
+
+    while minNeeded > 0:
+        nickname += getRandomWord(minNeeded, maxNeeded)
+        minNeeded, maxNeeded = getCharsNeeded(nickname, minNeeded, maxNeeded)
+    else:
+        print("%s (length: %d)" % (nickname, len(nickname)))
+        return nickname
 
 def makeFingerprintLine(fingerprint, version=None):
     """Generate an appropriate [bridge-]server-descriptor 'fingerprint' line.
