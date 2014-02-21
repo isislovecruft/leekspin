@@ -13,7 +13,6 @@
 from __future__ import print_function
 
 import setuptools
-import sys
 
 from glob import glob
 
@@ -97,6 +96,7 @@ class runTests(setuptools.Command):
         self.build_platlib = build.build_platlib
 
     def run(self):
+        import sys
         self.run_command('build')
         old_path = sys.path[:]
         sys.path[0:0] = [self.build_purelib, self.build_platlib]
