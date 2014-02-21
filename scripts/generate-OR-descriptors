@@ -52,13 +52,13 @@ except (ImportError, NameError) as error:
     print("This script requires pyOpenSSL>=0.13.0")
     raise SystemExit(error.message)
 
-import const
-import crypto
-import ntor
-import rsa
-import tls
-import torversions
-import util
+from leekspin import const
+from leekspin import crypto
+from leekspin import ntor
+from leekspin import rsa
+from leekspin import tls
+from leekspin import torversions
+from leekspin import util
 
 
 #: If the pynacl was found by :attr:`leekspin.ntor.nacl`.

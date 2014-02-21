@@ -29,7 +29,7 @@ import logging
 
 import OpenSSL.crypto
 
-import tls
+from leekspin import tls
 
 
 class OpenSSLKeyGenError(Exception):
