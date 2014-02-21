@@ -1,0 +1,51 @@
+.. -*- mode: rst-mode -*-
+
+================================================
+ Leekspin: An Onion Router descriptor generator
+================================================
+
+Leekspin (á la `the original internet masterpiece <http://leekspin.com/>`_) is
+a small library for generating mocked Onion Router (OR) descriptors, such as
+`those used by relays and bridges
+<https://metrics.torproject.org/formats.html#descriptortypes>`_ within `Tor
+<https://www.torproject.org>`_ in order to convey information about said
+relay/bridge to directory authorities (DirAuths), the bridge authority
+(BridgeAuth), clients connecting to the network (a.k.a. Onion Proxies (OP)),
+etc.
+
+This library is meant to be used to generate mock descriptors for testing
+other Tor libraries and programs, such as `Stem
+<https://gitweb.torproject.org/stem.git>`_ and `BridgeDB
+<https://gitweb.torproject.org/bridgedb.git>`_.
+
+Installing
+==========
+
+The very simplest way, if you use `pip
+<http://www.pip-installer.org/en/latest/>`_, would be to do::
+
+    $ pip install leekspin
+
+Otherwise, the standard setuptools commands work just fine::
+
+    $ git clone https://github.com/isislovecruft/leekspin.git
+    $ cd leekspin
+    $ python setup.py install --record installed-files.txt
+
+Running
+=======
+
+Leekspin will install a script named ``generate-OR-descriptors``. To use it to
+generate 20 descriptors, do::
+
+    $ generate-OR-descriptors -n 20
+
+TODO
+====
+
+Currently, Leekspin only creates `bridge descriptors
+<https://gitweb.torproject.org/bridgedb.git/blob/HEAD:/doc/DESCRIPTORS.md>`_
+. Much of Leekspin should be refactored, with new classes created based on
+those used in Stem to create pretty data structures for each type of
+descriptor. After that, Leekspin's functionality should be extended to also be
+capable of creating relay descriptors.
