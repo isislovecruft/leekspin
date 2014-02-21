@@ -115,6 +115,7 @@ setuptools.setup(
     name='leekspin',
     version=versioneer.get_version(),
     description='An Onion Router descriptor generator',
+    license="MIT license",
     author='isis & sysrqb',
     author_email='isis@torproject.org',
     maintainer='isis',
