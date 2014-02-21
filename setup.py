@@ -81,10 +81,13 @@ def get_requirements():
     return requirements, links
 
 class runTests(setuptools.Command):
-    # Based on setup.py from mixminion, which is based on setup.py
-    # from Zooko's pyutil package, which is in turn based on
-    # http://mail.python.org/pipermail/distutils-sig/2002-January/002714.html
-    description = "Run unit tests"
+    """Run unittests.
+
+    Based on setup.py from mixminion, which is based on setup.py from Zooko's
+    pyutil package, which is in turn based on:
+    http://mail.python.org/pipermail/distutils-sig/2002-January/002714.html
+    """
+    description = "Run unittests"
     user_options = []
 
     def initialize_options(self):
