@@ -43,7 +43,7 @@ generate 20 descriptors, do::
 TODO
 ====
 
-Currently, Leekspin only creates `bridge descriptors
+Currently, Leekspin only creates `bridge descriptors such as these
 <https://gitweb.torproject.org/bridgedb.git/blob/HEAD:/doc/DESCRIPTORS.md>`_
 . Much of Leekspin should be refactored, with new classes created based on
 those used in Stem to create pretty data structures for each type of
