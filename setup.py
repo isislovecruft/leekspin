@@ -12,7 +12,6 @@
 
 from __future__ import print_function
 
-import os
 import setuptools
 import sys
 
@@ -60,6 +59,8 @@ def get_requirements():
         which specify the dependency links for obtaining a copy of the
         requirement.
     """
+    import os
+
     requirements_file = os.path.join(os.getcwd(), 'requirements.txt')
     requirements = []
     links=[]
