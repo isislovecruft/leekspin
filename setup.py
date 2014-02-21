@@ -13,7 +13,7 @@
 from __future__ import print_function
 
 import setuptools
-
+import os
 
 # setup automatic versioning (see top-level versioneer.py file):
 import versioneer
@@ -35,6 +35,10 @@ versioneer.versionfile_build = 'leekspin/_version.py'
 versioneer.tag_prefix = 'leekspin-'
 # source tarballs should unpack to a directory like 'leekspin-6.6.6'
 versioneer.parentdir_prefix = 'leekspin-'
+
+# Use the ReStructured Text from the README file for PyPI:
+with open(os.path.join(os.getcwd(), 'README')) as readme:
+    long_description = readme.read()
 
 
 def get_cmdclass():
@@ -114,6 +118,7 @@ setuptools.setup(
     name='leekspin',
     version=versioneer.get_version(),
     description='An Onion Router descriptor generator',
+    long_description=long_description,
     license="MIT license",
     author='isis & sysrqb',
     author_email='isis@torproject.org',
