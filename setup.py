@@ -14,7 +14,6 @@ from __future__ import print_function
 
 import setuptools
 
-from glob import glob
 
 # setup automatic versioning (see top-level versioneer.py file):
 import versioneer
