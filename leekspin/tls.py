@@ -19,8 +19,8 @@ import time
 
 import OpenSSL.crypto
 
-import const
-import util
+from leekspin import const
+from leekspin import util
 
 
 PEM  = OpenSSL.crypto.FILETYPE_PEM
