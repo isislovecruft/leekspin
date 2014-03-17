@@ -62,77 +62,6 @@ from leekspin import util
 
 logging.getLogger('leekspin').setLevel(10)
 
-#: If the pynacl was found by :attr:`leekspin.ntor.nacl`.
-nacl = ntor.nacl
-
-
-def generateDescriptors():
-    """Create keys, certs, signatures, documents and descriptors for an OR.
-
-    :returns:
-        A 3-tuple of strings:
-          - a ``@type [bridge-]extra-info`` descriptor,
-          - a ``@type [bridge-]server-descriptor``, and
-          - a ``@type network-status`` document
-       for a mock Tor relay/bridge.
-    """
-    ipv4 = util.randomIPv4()
-    ipv6 = util.randomIPv6()
-    port = util.randomPort()
-
-    nick = nicknames.generateNickname()
-    vers = torversions.getRandomVersion()
-    uptime = int(random.randint(1800, 63072000))
-    bandwidth = makeBandwidthLine()
-    timestamp = util.makeTimeStamp(variation=True, period=36)
-    protocols = makeProtocolsLine(vers)
-
-    SIDSKey, SIDPCert, (onionkey, signingkey) = makeOnionKeys()
-    idkey_private = tls.getPrivateKey(SIDSKey)
-    idkey_digest = hashlib.sha1(idkey_private).digest()
-
-    idkey_public = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_ASN1,
-                                                  SIDPCert.get_pubkey())
-    idkey_public = re.sub(const.OPENSSL_BEGIN_KEY, '', idkey_public)
-    idkey_public = re.sub(const.OPENSSL_END_KEY, '', idkey_public)
-    idkey_public = idkey_public.strip()
-
-    ident_digest = hashlib.sha1(idkey_public).digest()
-    fingerprint = hashlib.sha1(idkey_public).hexdigest().upper()
-    fpr = crypto.convertToSpaceyFingerprint(fingerprint)
-
-    extrainfo_document = generateExtraInfo(nick, fingerprint,
-                                           timestamp, ipv4, port)
-    extrainfo_digest = hashlib.sha1(extrainfo_document).digest()
-    extrainfo_hexdigest = hashlib.sha1(extrainfo_document).hexdigest().upper()
-    extrainfo_sig = signDescriptorDigest(SIDSKey, extrainfo_digest)
-    extrainfo_desc = extrainfo_document + extrainfo_sig
-
-    server = []
-    server.append("@purpose bridge")
-    server.append("router %s %s %s 0 0" % (nick, ipv4, port))
-    server.append("or-address [%s]:%s" % (ipv6, port))
-    server.append("platform Tor %s on Linux" % vers)
-    server.append("%s\npublished %s" % (protocols, timestamp))
-    server.append("%s" % makeFingerprintLine(fingerprint, vers))
-    server.append("uptime %s\n%s" % (uptime, bandwidth))
-    server.append("%s" % makeExtraInfoDigestLine(extrainfo_hexdigest, vers))
-    server.append("%s%s%s" % (onionkey, signingkey, makeHSDirLine(vers)))
-    server.append("contact Somebody <somebody@example.com>")
-    if nacl is not None:
-        ntorkey = ntor.getNTORPublicKey()
-        if ntorkey is not None:
-            server.append("ntor-onion-key %s" % ntorkey)
-    server.append("reject *:*\nrouter-signature\n")
-    server_desc = '\n'.join(server)
-
-    server_desc_digest = hashlib.sha1(server_desc).digest()
-    netstatus_desc = generateNetstatus(nick, ident_digest, server_desc_digest,
-                                       timestamp, ipv4, port, ipv6=ipv6,
-                                       bandwidth_line=bandwidth)
-    server_desc += signDescriptorDigest(SIDSKey, server_desc_digest)
-    return extrainfo_desc, server_desc, netstatus_desc
-
 def writeDescToFile(filename, descriptors):
     """Open ``filename`` and write a string containing descriptors into it.
 
@@ -151,56 +80,6 @@ def writeDescToFile(filename, descriptors):
         print("Failure while attempting to write descriptors to file '%s': %s"
               % (filename, err.message))
 
-def create(count):
-    """Generate all types of descriptors and write them to files.
-
-    :param integer count: How many sets of descriptors to generate, i.e. how
-        many mock bridges/relays to create.
-    """
-    if nacl is None:
-        logging.warn("WARNING: Can't import PyNaCl. NTOR key generation is disabled.")
-    print("Generating %d bridge descriptors..." % int(count))
-    logging.info("Generated router nicknames:")
-
-    server_descriptors    = list()
-    netstatus_consensus   = list()
-    extrainfo_descriptors = list()
-    try:
-        for i in xrange(int(count)):
-            try:
-                extrainfo, server, netstatus = generateDescriptors()
-            except Exception as error:
-                err, msg, tb = sys.exc_info()
-                print(traceback.print_tb(tb))
-                print(error)
-            else:
-                server_descriptors.append(server)
-                netstatus_consensus.append(netstatus)
-                extrainfo_descriptors.append(extrainfo)
-    except KeyboardInterrupt as keyint:
-        print("Received keyboard interrupt.")
-        print("Stopping descriptor creation and exiting.")
-        code = 1515
-    finally:
-        print("Writing descriptors to files...", end="")
-
-        cached = "cached-extrainfo.new"
-        descriptor_files = {
-            "networkstatus-bridges": ''.join(netstatus_consensus),
-            "bridge-descriptors": ''.join(server_descriptors),
-            "cached-extrainfo.new": ''.join(extrainfo_descriptors)}
-
-        if not os.path.isfile(cached):
-            with open(cached, 'wb') as fh:
-                fh.flush()
-        if os.path.isfile(cached):
-            os.rename(cached, "cached-extrainfo")
-
-        for fn, giantstring in descriptor_files.items():
-            writeDescToFile(fn, giantstring)
-        print("Done.")
-        code = 0
-        sys.exit(code)
 
 if __name__ == "__main__":
     try:
