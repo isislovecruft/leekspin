@@ -10,12 +10,18 @@
                (c) 2013-2014 Matthew Finkel
 """
 
-from codecs   import open as open
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
+
+from codecs import open as open
 
 import logging
 import os
 import random
 import string
+
+logging.getLogger('leekspin')
 
 
 DICTIONARY_FILE          = '/usr/share/dict/words'
@@ -39,7 +45,7 @@ def _createWordsForNicks():
         for word in rawdict:
             for char in word:
                 if char not in allowedChars:
-                    word = word.replace(char, '').capitalize()
+                    word = word.replace(char, str()).capitalize()
             wordlist.append(word)
     return wordlist
 
