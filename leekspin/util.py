@@ -7,9 +7,12 @@ from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+from codecs import open as open
+
 import argparse
 import ipaddr
 import random
+import sys
 import time
 
 
@@ -102,3 +105,21 @@ def makeTimeStamp(now=None, fmt=None, variation=False, period=None):
         now = diff
 
     return time.strftime(fmt, time.localtime(now))
+
+def writeDescToFile(filename, descriptors):
+    """Open ``filename`` and write a string containing descriptors into it.
+
+    :param string filename: The name of the file to write to.
+    :param string descriptors: A giant string containing descriptors,
+        newlines, formatting, whatever is necessary to make it look like a
+        file tor would generate.
+    """
+    encoding = sys.getfilesystemencoding()
+    descript = descriptors.encode(encoding, 'replace')
+    try:
+        with open(filename, 'wb', encoding=encoding, errors='replace') as fh:
+            fh.write(descript)
+            fh.flush()
+    except (IOError, OSError) as err:
+        print("Failure while attempting to write descriptors to file '%s': %s"
+              % (filename, err.message))
