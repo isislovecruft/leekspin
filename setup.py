@@ -130,7 +130,7 @@ setuptools.setup(
     download_url=download_urls,
     packages=['leekspin'],
     scripts=['scripts/generate-OR-descriptors'],
-    extras_require={'ntor': ["nacl==0.1.0"],
+    extras_require={'ntor': ["PyNaCl==0.2.3"],
                     'test': ["sure==0.4.5", "coverage==3.6"]},
     zip_safe=False,
     cmdclass=get_cmdclass(),
