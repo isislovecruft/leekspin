@@ -114,9 +114,7 @@ class runTests(setuptools.Command):
 
 #requires, deplinks = get_requirements()
 
-download_urls='''\
-https://github.com/isislovecruft/leekspin.git
-https://gitweb.torproject.org/user/isis/leekspin.git'''
+download_urls='https://gitweb.torproject.org/user/isis/leekspin.git'
 
 setuptools.setup(
     name='leekspin',
