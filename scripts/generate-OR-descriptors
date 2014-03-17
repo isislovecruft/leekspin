@@ -3,9 +3,9 @@
 
 """Generate valid and signed descriptors for mocked Tor relays or bridges.
 
-.. todo:: Finish enough CFFI_ bindings for the newer PyNaCl_ (or enough of the
-    SWIG_ bindings for the older pynacl_) to be able to emulate the following
-    curvecp_ command (the ``curvecp*`` commands require libchloride_):
+.. note:: This application uses the CFFI_ version of PyNaCl_ to emulate the
+    following curvecp_ commands (the ``curvecp*`` commands require
+    libchloride_, which is therefore also required):
 
         $ curvecpmakekey ntor-key
         $ curvecpprintkey ntor-key > ntor-key.hex
@@ -15,9 +15,7 @@
             sys.stdout.write(key_b64);'
 
     .. _CFFI: https://cffi.readthedocs.org
-    .. _PyNaCl: https://github.com/seanlynch/pynacl
-    .. _SWIG: https://github.com/swig/swig
-    .. _pynacl: https://github.com/seanlynch/pynacl
+    .. _PyNaCl: https://github.com/pyca/pynacl
     .. _curvecp: http://curvecp.org/
     .. _libchloride: https://github.com/jedisct1/libchloride
 
