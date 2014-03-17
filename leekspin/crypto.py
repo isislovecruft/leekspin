@@ -26,6 +26,8 @@ from __future__ import unicode_literals
 
 import binascii
 
+import OpenSSL.crypto
+
 from leekspin import const
 from leekspin import rsa
 from leekspin import tls
@@ -130,3 +132,81 @@ def makeOnionKeys(bridge=True, digest='sha1'):
     signingKeyString = 'signing-key\n%s' % tls.getPublicKey(signPCert)
 
     return SIDSKey, SIDPCert, (onionKeyString, signingKeyString)
+
+def signDescriptorDigest(key, descriptorDigest, digest='sha1'):
+    """Ugh...I hate OpenSSL.
+
+    The extra-info-digest is a SHA-1 hash digest of the extrainfo document,
+    that is, the entire extrainfo descriptor up until the end of the
+    'router-signature' line and including the newline, but not the actual
+    signature.
+
+    The signature at the end of the extra-info descriptor is a signature of
+    the above extra-info-digest. This signature is appended to the end of the
+    extrainfo document, and the extra-info-digest is added to the
+    'extra-info-digest' line of the [bridge-]server-descriptor.
+
+    The first one of these was created with a raw digest, the second with a
+    hexdigest. They both encode the the 'sha1' digest type if you check the
+    `-asnparse` output (instead of `-raw -hexdump`).
+
+    .. command:: openssl rsautl -inkey eiprivkey -verify -in eisig1 -raw -hexdump
+      |
+      | 0000 - 00 01 ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0010 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0020 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0030 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0040 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0050 - ff ff ff ff ff ff ff ff-ff ff ff ff 00 30 21 30   .............0!0
+      | 0060 - 09 06 05 2b 0e 03 02 1a-05 00 04 14 42 25 41 fb   ...+........B%A.
+      | 0070 - 82 ef 11 f4 5f 2c 95 53-67 2d bb fe 7f c2 34 7f   ...._,.Sg-....4.
+
+    .. command:: openssl rsautl -inkey eiprivkey -verify -in eisig2 -raw -hexdump
+      |
+      | 0000 - 00 01 ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0010 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0020 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0030 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0040 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
+      | 0050 - ff ff ff ff ff ff ff ff-ff ff ff ff 00 30 21 30   .............0!0
+      | 0060 - 09 06 05 2b 0e 03 02 1a-05 00 04 14 44 30 ab 90   ...+........D0..
+      | 0070 - 93 d1 08 21 df 87 c2 39-2a 04 1c a5 bb 34 44 cd   ...!...9*....4D.
+
+    .. todo:: See the RSA PKCS_ Standard v2.2 for why this function is totally
+       wrong.
+
+    .. _PKCS: http://www.emc.com/collateral/white-papers/h11300-pkcs-1v2-2-rsa-cryptography-standard-wp.pdf
+
+    :type key: :class:`OpenSSL.crypto.PKey`
+    :param key: An RSA private key.
+    :param string descriptorDigest: The raw SHA-1 digest of any descriptor
+        document.
+    :param string digest: The digest to use. (default: 'sha1')
+    """
+    sig = binascii.b2a_base64(OpenSSL.crypto.sign(key, descriptorDigest,
+                                                  digest))
+    sigCopy = sig
+    originalLength = len(sigCopy.replace('\n', ''))
+
+    # Only put 64 bytes of the base64 signature per line:
+    sigSplit = []
+    while len(sig) > 0:
+        sigSplit.append(sig[:64])
+        sig = sig[64:]
+    sigFormatted = '\n'.join(sigSplit)
+
+    sigFormattedCopy = sigFormatted
+    formattedLength = len(sigFormattedCopy.replace('\n', ''))
+
+    if originalLength != formattedLength:
+        print("WARNING: signDescriptorDocument(): %s"
+              % "possible bad reformatting for signature.")
+        print("DEBUG: signDescriptorDocument(): original=%d formatted=%d"
+              % (originalLength, formattedLength))
+        print("DEBUG: original:\n%s\nformatted:\n%s"
+              % (sigCopy, sigFormatted))
+
+    sigWithHeaders = const.TOR_BEGIN_SIG + '\n' \
+                     + sigFormatted \
+                     + const.TOR_END_SIG + '\n'
+    return sigWithHeaders
