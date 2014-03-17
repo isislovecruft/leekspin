@@ -60,8 +60,7 @@ from leekspin import tls
 from leekspin import torversions
 from leekspin import util
 
-
-logging.getLogger('leekspin')
+logging.getLogger('leekspin').setLevel(10)
 
 #: If the pynacl was found by :attr:`leekspin.ntor.nacl`.
 nacl = ntor.nacl
@@ -551,11 +550,17 @@ if __name__ == "__main__":
         parser = util.getArgParser()
         options = parser.parse_args()
 
-        if options.quiet:
+        if options.verbose:
+            logging.getLogger('leekspin').addHandler(logging.StreamHandler())
+            logging.getLogger('leekspin').setLevel(10)
+        elif options.quiet:
             print = lambda x: True
+            logging.ignore(100)
+
         if options.version:
             print("gen_bridge_descriptors-%s" % parser.version)
             sys.exit(0)
+
         if options.descriptors and (options.descriptors > 0):
             create(options.descriptors)
         else:
