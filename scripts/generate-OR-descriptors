@@ -31,33 +31,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import binascii
-import hashlib
-import ipaddr
 import logging
-import math
-import os
-import sys
-import random
-import re
-import traceback
 
-from datetime import datetime
-from codecs   import open as open
-
-try:
-    import OpenSSL.crypto
-except (ImportError, NameError) as error:
-    print("This script requires pyOpenSSL>=0.13.0")
-    raise SystemExit(error.message)
-
-from leekspin import const
-from leekspin import crypto
-from leekspin import nicknames
-from leekspin import ntor
-from leekspin import rsa
-from leekspin import tls
-from leekspin import torversions
+from leekspin import generator
 from leekspin import util
 
 logging.getLogger('leekspin').setLevel(10)
@@ -80,7 +56,7 @@ if __name__ == "__main__":
             sys.exit(0)
 
         if options.descriptors and (options.descriptors > 0):
-            create(options.descriptors)
+            generator.create(options.descriptors)
         else:
             raise SystemExit(parser.format_help())
 
