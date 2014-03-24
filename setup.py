@@ -15,26 +15,31 @@ from __future__ import print_function
 import setuptools
 import os
 
-# setup automatic versioning (see top-level versioneer.py file):
-import versioneer
-versioneer.versionfile_source = 'leekspin/_version.py'
-versioneer.versionfile_build = 'leekspin/_version.py'
+try:
+    # setup automatic versioning (see top-level versioneer.py file):
+    import versioneer
+except (ImportError, NameError):
+    print("Could not initiate automatic versioning tool, versioneer.")
+else:
+    versioneer.versionfile_source = 'leekspin/_version.py'
+    versioneer.versionfile_build = 'leekspin/_version.py'
 
-# when creating a release, tags should be prefixed with 'leekspin-', like so:
-#
-#     git checkout -b release-6.6.6 develop
-#     [do some stuff, merge whatever, test things]
-#     git tag -S leekspin-6.6.6
-#     git push tpo-common --tags
-#     git checkout master
-#     git merge -S --no-ff release-6.6.6
-#     git checkout develop
-#     git merge -S --no-ff master
-#     git branch -d release-6.6.6
-#
-versioneer.tag_prefix = 'leekspin-'
-# source tarballs should unpack to a directory like 'leekspin-6.6.6'
-versioneer.parentdir_prefix = 'leekspin-'
+    # when creating a release, tags should be prefixed with 'leekspin-', like so:
+    #
+    #     git checkout -b release-6.6.6 develop
+    #     [do some stuff, merge whatever, test things]
+    #     git tag -S leekspin-6.6.6
+    #     git push tpo-common --tags
+    #     git checkout master
+    #     git merge -S --no-ff release-6.6.6
+    #     git checkout develop
+    #     git merge -S --no-ff master
+    #     git branch -d release-6.6.6
+    #
+    versioneer.tag_prefix = 'leekspin-'
+    # source tarballs should unpack to a directory like 'leekspin-6.6.6'
+    versioneer.parentdir_prefix = 'leekspin-'
+
 
 # Use the ReStructured Text from the README file for PyPI:
 with open(os.path.join(os.getcwd(), 'README')) as readme:
