@@ -35,10 +35,10 @@ Otherwise, the standard setuptools commands work just fine::
 Running
 =======
 
-Leekspin will install a script named ``generate-OR-descriptors``. To use it to
-generate 20 descriptors, do::
+Leekspin will install a script named… ``leekspin``. To use it to generate 20
+descriptors, do::
 
-    $ generate-OR-descriptors -n 20
+    $ leekspin -n 20
 
 TODO
 ====
