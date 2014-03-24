@@ -27,7 +27,7 @@ try:
     import OpenSSL
     import OpenSSL.crypto
 except (ImportError, NameError) as error:
-    print("This script requires pyOpenSSL>=0.13.0")
+    print("This script requires pyOpenSSL>=0.14.0")
     raise SystemExit(error.message)
 
 import OpenSSL
@@ -125,9 +125,7 @@ def create(count):
     :param integer count: How many sets of descriptors to generate, i.e. how
         many mock bridges/relays to create.
     """
-    if nacl is None:
-        logging.warn("WARNING: Can't import PyNaCl. NTOR key generation is disabled.")
-    print("Generating %d bridge descriptors..." % int(count))
+    logging.info("Generating %d bridge descriptors..." % int(count))
     logging.info("Generated router nicknames:")
 
     server_descriptors    = list()
@@ -139,18 +137,21 @@ def create(count):
                 extrainfo, server, netstatus = generateDescriptors()
             except Exception as error:
                 err, msg, tb = sys.exc_info()
-                print(traceback.print_tb(tb))
-                print(error)
+                try:
+                    logging.error(error)
+                except:
+                    print(traceback.print_tb(tb))
+                    print(error)
             else:
                 server_descriptors.append(server)
                 netstatus_consensus.append(netstatus)
                 extrainfo_descriptors.append(extrainfo)
     except KeyboardInterrupt as keyint:
-        print("Received keyboard interrupt.")
-        print("Stopping descriptor creation and exiting.")
+        logging.warn("Received keyboard interrupt.")
+        logging.warn("Stopping descriptor creation and exiting.")
         code = 1515
     finally:
-        print("Writing descriptors to files...", sep=' ', end="")
+        logging.info("Writing descriptors to files...")
 
         cached = "cached-extrainfo.new"
         descriptor_files = {
@@ -166,6 +167,6 @@ def create(count):
 
         for fn, giantstring in descriptor_files.items():
             util.writeDescToFile(fn, giantstring)
-        print("Done.")
+        logging.info("Done.")
         code = 0
         sys.exit(code)

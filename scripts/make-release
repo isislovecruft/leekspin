@@ -42,9 +42,9 @@ if [[ "$upload_to_pypi" == "yes" ]] ; then
 fi
 
 git checkout master && \
-    gm --no-edit release-"$version" && \
+    git merge -S --no-ff --no-edit release-"$version" && \
     git checkout develop && \
-    gm --no-edit master && \
+    git merge -S --no-ff --no-edit master && \
     git branch -d release-"$version"
 
 for r in ${remotes} ; do
