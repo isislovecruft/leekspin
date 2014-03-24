@@ -125,8 +125,6 @@ def create(count):
     :param integer count: How many sets of descriptors to generate, i.e. how
         many mock bridges/relays to create.
     """
-    if nacl is None:
-        logging.warn("WARNING: Can't import PyNaCl. NTOR key generation is disabled.")
     print("Generating %d bridge descriptors..." % int(count))
     logging.info("Generated router nicknames:")
 
