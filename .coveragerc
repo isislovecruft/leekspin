@@ -1,0 +1,35 @@
+[run]
+source = 
+     leekspin/*
+branch = True
+#parallel = True
+timid = True
+
+[report]
+modules = leekspin
+omit = 
+     */test*
+     */_version*
+     */__init__*
+     */sitecustomize*
+# Regexes for lines to exclude from report generation:
+exclude_lines = 
+     pragma: no cover
+     nocoverage
+     # don't complain if the code doesn't hit unimplemented sections:
+     raise NotImplementedError
+     pass
+     # don't complain if non-runnable or debuging code isn't run:
+     if 0:
+     if False:
+     if self[.verbosity.]
+     if options[.verbosity.]
+     def __repr__
+     if __name__ == .__main__.:
+# Ignore source code which cannot be found:
+ignore_errors = True
+# Exit with status code 2 if under this percentage is covered:
+fail_under = 10
+
+[html]
+directory = coverage-html
