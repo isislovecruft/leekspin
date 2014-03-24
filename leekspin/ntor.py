@@ -31,7 +31,7 @@ try:
     import nacl.public
 except (ImportError, NameError, IOError) as error:
     logging.warn("Could not import pyNaCl: https://github.com/pyca/pynacl. "\
-                 "NTOR key generation will be disabled.)
+                 "NTOR key generation will be disabled.")
 
 
 class NTORKeyCreationError(Exception):
