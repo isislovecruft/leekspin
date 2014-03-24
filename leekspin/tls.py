@@ -10,7 +10,6 @@ keys.
 
 from __future__ import print_function
 from __future__ import absolute_import
-from __future__ import unicode_literals
 
 import logging
 import random
@@ -79,6 +78,9 @@ def attachKey(key, cert, selfsign=True, digest='sha1', pem=False):
               returned. Otherwise, returns the **cert** with the **key**
               attached to it.
     """
+    # OpenSSL requires an ascii string, not unicode:
+    digest = type('')(digest)
+
     # Attach the key to the certificate
     cert.set_pubkey(key)
 
