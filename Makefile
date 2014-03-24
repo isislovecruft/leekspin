@@ -60,7 +60,9 @@ clean: clean-build clean-dist
 clean-all: clean-emacs clean-pyc clean-build clean-dist
 
 coverage:
-	-coverage run $(which trial) ./leekspin/test/test_* && coverage report && coverage html
+	-coverage -rcfile=".coveragerc" run $(which trial) ./leekspin/test/test_* && \
+		coverage report && coverage html
+	-firefox coverage-html/index.html
 
 upload:
 	python setup.py bdist_egg upload --sign
