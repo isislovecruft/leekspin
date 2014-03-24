@@ -114,9 +114,7 @@ class runTests(setuptools.Command):
 
 #requires, deplinks = get_requirements()
 
-download_urls='''\
-https://github.com/isislovecruft/leekspin.git
-https://gitweb.torproject.org/user/isis/leekspin.git'''
+download_urls='https://gitweb.torproject.org/user/isis/leekspin.git'
 
 setuptools.setup(
     name='leekspin',
@@ -132,7 +130,7 @@ setuptools.setup(
     download_url=download_urls,
     packages=['leekspin'],
     scripts=['scripts/generate-OR-descriptors'],
-    extras_require={'ntor': ["nacl==0.1.0"],
+    extras_require={'ntor': ["PyNaCl==0.2.3"],
                     'test': ["sure==0.4.5", "coverage==3.6"]},
     zip_safe=False,
     cmdclass=get_cmdclass(),
