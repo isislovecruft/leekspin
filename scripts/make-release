@@ -1,0 +1,56 @@
+#!/bin/bash
+# -*- coding: utf-8 ; mode: sh -*-
+#
+#   make-release
+#   ============
+#   Release script for Leekspin.
+#
+# :author: Isis <isis@torproject.org>
+# :license: see included LICENSE file
+# :copyright: (c) 2014 Isis Lovecruft
+#             (c) 2014 The Tor Project, Inc.
+#______________________________________________________________________________
+
+function usage()
+{
+    printf "Usage: %s VERSION_STRING\n\n" ${0%%/}
+    printf "Arguments:\n"
+    printf "VERSION_STRING\t\tA string specifying the newly released version,\n"
+    printf "              \t\tex. \"0.1.5\".\n"
+}
+
+
+if test "$#" -ne "1" ; then
+    usage
+    exit 1
+fi
+
+package="leekspin"
+packagename="Leekspin"  # for git tag messages
+remotes="tpo-isis isislovecruft"
+upload_to_pypi="yes"
+version="$1"
+
+printf "Creating new release of Leekspin, version %s...\n" "$version"
+
+git checkout -b release-"$version" develop
+echo "Release ${packagename:-package} version $version" | git tag -a -s -F - "$package"-"$version"
+
+if [[ "$upload_to_pypi" == "yes" ]] ; then
+    printf "\nUploading %s-%s to PyPI...\n\n" "$package" "$version"
+    make upload
+fi
+
+git checkout master && \
+    gm --no-edit release-"$version" && \
+    git checkout develop && \
+    gm --no-edit master && \
+    git branch -d release-"$version"
+
+for r in ${remotes} ; do
+    torsocks git push $r --tags
+    torsocks git push $r master develop
+done
+
+printf "\nReleased %s-%s successfully!\n" "$package" "$version"
+exit 0
