@@ -40,6 +40,10 @@ else:
     # source tarballs should unpack to a directory like 'leekspin-6.6.6'
     versioneer.parentdir_prefix = 'leekspin-'
 
+try:
+    version = versioneer.get_version()
+except:
+    version = "unknown"
 
 # Use the ReStructured Text from the README file for PyPI:
 with open(os.path.join(os.getcwd(), 'README')) as readme:
@@ -54,7 +58,10 @@ def get_cmdclass():
     dictionary with the one returned from versioneer.get_cmdclass().
     """
     cmdclass = {'test': runTests}
-    cmdclass.update(versioneer.get_cmdclass())
+    try:
+        cmdclass.update(versioneer.get_cmdclass())
+    except NameError:
+        pass
     return cmdclass
 
 def get_requirements():
@@ -123,7 +130,7 @@ download_urls='https://gitweb.torproject.org/user/isis/leekspin.git'
 
 setuptools.setup(
     name='leekspin',
-    version=versioneer.get_version(),
+    version=version,
     description='An Onion Router descriptor generator',
     long_description=long_description,
     license="MIT license",
