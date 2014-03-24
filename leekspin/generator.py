@@ -27,7 +27,7 @@ try:
     import OpenSSL
     import OpenSSL.crypto
 except (ImportError, NameError) as error:
-    print("This script requires pyOpenSSL>=0.13.0")
+    print("This script requires pyOpenSSL>=0.14.0")
     raise SystemExit(error.message)
 
 import OpenSSL
