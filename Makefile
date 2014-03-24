@@ -36,16 +36,33 @@ force-install:
 uninstall:
 	touch installed-files.txt
 	cat installed-files.txt | xargs rm -rf
+	rm installed-files.txt
 
 reinstall: uninstall force-install
 
-clean:
+clean-emacs:
+	find . -name '*~' -delete
+	-find . -name '\.#*' -exec rm -i {} \;
+
+clean-pyc:
+	find . -name '*.pyc' -delete
+
+clean-build:
 	-rm -rf build
-	-rm -rf dist
 	-rm -rf leekspin.egg-info
+	-rm -rf MANIFEST
+
+clean-dist:
+	-rm -rf dist
+
+clean: clean-build clean-dist
+
+clean-all: clean-emacs clean-pyc clean-build clean-dist
 
 coverage:
-	-coverage run $(which trial) ./leekspin/test/test_* && coverage report && coverage html
+	-coverage -rcfile=".coveragerc" run $(which trial) ./leekspin/test/test_* && \
+		coverage report && coverage html
+	-firefox coverage-html/index.html
 
 upload:
 	python setup.py bdist_egg upload --sign
