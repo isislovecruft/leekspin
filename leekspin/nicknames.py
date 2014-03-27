@@ -78,6 +78,9 @@ def _getRandomWord(minlength=NICKNAME_LENGTH_MIN, maxlength=NICKNAME_LENGTH_MAX)
 
 def generateNickname(maxlength=NICKNAME_LENGTH_MAX):
     """Generate a random alphanumeric nickname conforming to the specified length."""
+    if len(_words) == 0:  # if there was no /usr/share/dict/words file
+        return "Unnamed"
+
     nickname = _getRandomWord(NICKNAME_LENGTH_MIN, maxlength)
     minNeeded, maxNeeded = _getCharsNeeded(nickname, NICKNAME_LENGTH_PREF_MIN, maxlength)
 
