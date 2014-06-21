@@ -53,7 +53,7 @@ if __name__ == "__main__":
             logging.ignore(100)
 
         if options.version:
-            print("gen_bridge_descriptors-%s" % parser.version)
+            print("%s" % parser.version)
             sys.exit(0)
 
         if options.descriptors and (options.descriptors > 0):

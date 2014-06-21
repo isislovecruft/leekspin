@@ -15,20 +15,24 @@ import random
 import sys
 import time
 
-
-#: The version of this script
-__version__ = '0.3.0'
+from leekspin import __version__
+from leekspin import __package__
 
 
 def getArgParser():
     """Get our :class:`~argparse.ArgumentParser`."""
-    parser = argparse.ArgumentParser(add_help=True)
-    parser.version = __version__
+    version_ = '-'.join([__package__, __version__.rsplit('_', 1)[0]])
+    parser = argparse.ArgumentParser(prog=__package__,
+                                     add_help=True)
+    # Otherwise we hit an argparse bug that prints the following cryptic error:
+    # `'Namespace' object has no 'version' attribute`
+    parser.prog = __package__
+    parser.version = version_
     parser.description  = "Generate a signed set of network-status, "
     parser.description += "extra-info, and server descriptor documents "
     parser.description += "for mock Tor relays or bridges."
-    infoargs = parser.add_mutually_exclusive_group()
     verbargs = parser.add_mutually_exclusive_group()
+    infoargs = parser.add_mutually_exclusive_group()
     infoargs.add_argument("-v", "--verbose", action="store_true",
                           help="print information to stdout")
     infoargs.add_argument("-q", "--quiet", action="store_true",
