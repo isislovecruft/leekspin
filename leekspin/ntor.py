@@ -23,6 +23,11 @@ from __future__ import unicode_literals
 
 import binascii
 import logging
+import warnings
+
+# Get rid of the `UserWarning: reimporting '_cffi__x6e273d72xa4719796' might
+# overwrite older definitions` warnings when importing nacl:
+warnings.simplefilter('ignore', UserWarning, append=True)
 
 nacl = None
 

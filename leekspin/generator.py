@@ -132,6 +132,13 @@ def create(count):
     netstatus_consensus   = list()
     extrainfo_descriptors = list()
     try:
+        # Add headers:
+        netstatus_consensus.append(
+            ('flag-thresholds stable-uptime=613624 stable-mtbf=2488616 '
+             'fast-speed=15000 guard-wfu=98.000% guard-tk=691200 '
+             'guard-bw-inc-exits=55000 guard-bw-exc-exits=55000 enough-mtbf=1 '
+             'ignoring-advertised-bws=0'))
+
         for i in xrange(int(count)):
             try:
                 extrainfo, server, netstatus = generateDescriptors()
