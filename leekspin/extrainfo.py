@@ -23,6 +23,11 @@ def generateExtraInfo(nickname, fingerprint, ts, ipv4, port):
 
     See §2.2 "Extra-info documents" in torspec.git/dir-spec.txt.
 
+    For ``transport scramblesuit`` lines, the ``password`` parameter *always*
+    is ``ABCDEFGHIJKLMNOPQRSTUVWXYZ234567``, i.e.::
+
+        transport scramblesuit 10.0.1.111:4444 password=ABCDEFGHIJKLMNOPQRSTUVWXYZ234567
+
     :param str nickname: The router's nickname.
     :param str fingerprint: A space-separated, hex-encoded, SHA-1 digest of
         the OR's private identity key. See :func:`convertToSpaceyFingerprint`.
@@ -32,6 +37,8 @@ def generateExtraInfo(nickname, fingerprint, ts, ipv4, port):
     :rtype: str
     :returns: An extra-info document (unsigned).
     """
+    scramblesuitPassword = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+
     extra = []
     extra.append("extra-info %s %s" % (nickname, fingerprint))
     extra.append("published %s" % ts)
@@ -49,6 +56,7 @@ def generateExtraInfo(nickname, fingerprint, ts, ipv4, port):
     extra.append("dirreq-v3-tunneled-dl complete=12,timeout=0,running=0")
     extra.append("transport obfs3 %s:%d" % (ipv4, port + 1))
     extra.append("transport obfs2 %s:%d" % (ipv4, port + 2))
+    extra.append("transport scramblesuit %s:%d password=%s" % (ipv4, port + 3, scramblesuitPassword))
     extra.append("bridge-stats-end %s (86400 s)" % ts)
     extra.append("bridge-ips ca=8")
     extra.append("bridge-ip-versions v4=8,v6=0")
