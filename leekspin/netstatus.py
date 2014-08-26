@@ -17,10 +17,10 @@ from __future__ import unicode_literals
 import binascii
 
 
-def generateNetstatus(nickname, idkey_digest, server_desc_digest, timestamp,
-                      ipv4, orport, ipv6=None, dirport=None,
-                      flags='Fast Guard Running Stable Valid',
-                      bandwidth_line=None):
+def generateBridgeNetstatus(nickname, idkey_digest, server_desc_digest,
+                            timestamp, ipv4, orport, ipv6=None, dirport=None,
+                            flags='Fast Guard Running Stable Valid',
+                            bandwidth_line=None):
     """Generate an ``@type bridge network-status 1.0`` document (unsigned).
 
     This function will generate a networkstatus document for a bridge relay,

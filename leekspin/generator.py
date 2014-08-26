@@ -112,10 +112,14 @@ def generateDescriptors():
     serverDesc = '\n'.join(serverDoc)
     serverDescDigest = hashlib.sha1(serverDesc).digest()
 
-    netstatusDesc = netstatus.generateNetstatus(nick, identDigest,
-                                                serverDescDigest, timestamp,
-                                                ipv4, port, ipv6=ipv6,
-                                                bandwidth_line=bandwidth)
+    netstatusDesc = netstatus.generateBridgeNetstatus(nick,
+                                                      identDigest,
+                                                      serverDescDigest,
+                                                      timestamp,
+                                                      ipv4,
+                                                      port,
+                                                      ipv6=ipv6,
+                                                      bandwidth_line=bandwidth)
     serverDesc += crypto.signDescriptorDigest(SIDSKey, serverDescDigest)
     return extrainfoDesc, serverDesc, netstatusDesc
 
