@@ -112,10 +112,14 @@ def generateDescriptors():
     serverDesc = '\n'.join(serverDoc)
     serverDescDigest = hashlib.sha1(serverDesc).digest()
 
-    netstatusDesc = netstatus.generateNetstatus(nick, identDigest,
-                                                serverDescDigest, timestamp,
-                                                ipv4, port, ipv6=ipv6,
-                                                bandwidth_line=bandwidth)
+    netstatusDesc = netstatus.generateBridgeNetstatus(nick,
+                                                      identDigest,
+                                                      serverDescDigest,
+                                                      timestamp,
+                                                      ipv4,
+                                                      port,
+                                                      ipv6=ipv6,
+                                                      bandwidth_line=bandwidth)
     serverDesc += crypto.signDescriptorDigest(SIDSKey, serverDescDigest)
     return extrainfoDesc, serverDesc, netstatusDesc
 
@@ -137,7 +141,7 @@ def create(count):
             ('flag-thresholds stable-uptime=613624 stable-mtbf=2488616 '
              'fast-speed=15000 guard-wfu=98.000% guard-tk=691200 '
              'guard-bw-inc-exits=55000 guard-bw-exc-exits=55000 enough-mtbf=1 '
-             'ignoring-advertised-bws=0'))
+             'ignoring-advertised-bws=0\n'))
 
         for i in xrange(int(count)):
             try:
