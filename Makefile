@@ -66,5 +66,5 @@ coverage:
 
 upload: clean-all
 	python setup.py bdist_egg upload --sign
-	python setup.py bdist_wheel upload --sign
+	#python setup.py bdist_wheel upload --sign
 	python setup.py sdist upload --sign
