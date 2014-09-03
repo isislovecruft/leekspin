@@ -16,6 +16,7 @@ Functions:
 ``````````
 ::
 
+  addPKCS1Padding - PKCS#1 pad a message.
   convertToSpaceyFingerprint - Add space character delimiters to a fingerprint.
 
 """
@@ -23,21 +24,136 @@ Functions:
 from __future__ import print_function
 from __future__ import absolute_import
 
+import base64
 import binascii
+import codecs
+import hashlib
+import sys
+
+from Crypto.PublicKey import RSA
+from Crypto.Util import asn1
+from Crypto.Util.number import long_to_bytes
 
 import OpenSSL.crypto
 
 from leekspin import const
 from leekspin import rsa
 from leekspin import tls
+from leekspin.const import TOR_BEGIN_KEY
+from leekspin.const import TOR_END_KEY
+from leekspin.const import TOR_BEGIN_SIG
+from leekspin.const import TOR_END_SIG
+from leekspin.const import TOKEN_ONION_KEY
+from leekspin.const import TOKEN_ROUTER_SIGNATURE
+from leekspin.const import TOKEN_SIGNING_KEY
 
 
 class InvalidFingerprint(ValueError):
     """Raised when a key fingerprint is invalid."""
 
 
-def convertToSpaceyFingerprint(fingerprint):
+def addPKCS1Padding(message):
+    """Add PKCS#1 padding to **message**.
+    
+    (PKCS#1 v1.0? see https://bugs.torproject.org/13042)
+    
+    Each block is 128 bytes total in size:
+
+        * 2 bytes for the type info ('\x00\x01')
+        * 1 byte for the separator ('\x00')
+        * variable length padding ('\xFF')
+        * variable length for the **message**
+
+    :param str message: The message will be encoded as bytes before adding
+        PKCS#1 padding.
+    :rtype: bytes
+    :returns: The PKCS#1 padded message.
+    """
+    #if sys.version_info.major == 3:
+    #    if isinstance(message, unicode):
+    #        message = codecs.latin_1_encode(message, 'replace')[0]
+    #else:
+    #    if isinstance(message, str):
+    #        message = codecs.latin_1_encode(message, 'replace')[0]
+
+    padding = b''
+    typeinfo = b'\x00\x01'
+    separator = b'\x00'
+
+    for x in range(125 - len(message)):
+        padding += b'\xFF'
+
+    PKCS1paddedMessage = typeinfo + padding + separator + message
+    assert len(PKCS1paddedMessage) == 128
+
+    return PKCS1paddedMessage
+
+def addTorPKHeaderAndFooter(publicKey):
+    """Add the ``----BEGIN[...]`` and end headers to a **publicKey**.
+
+    :param bytes publicKey: A headerless, chunked, base64-encoded,
+        PKCS#1-padded, ASN.1 DER sequence string representation of a public
+        RSA key.
+    :rtype: bytes
+    :returns: The same signature, with the headers which Tor uses around it.
+    """
+    return b'\n'.join([TOR_BEGIN_KEY, publicKey, TOR_END_KEY])
+
+def addTorSigHeaderAndFooter(signature):
+    """Add the ``----BEGIN[...]`` and end headers to a **signature**.
+
+    :param bytes signature: A headerless, chunked, base64-encoded signature.
+    :rtype: bytes
+    :returns: The same signature, with the headers which Tor uses around it.
+    """
+    return b'\n'.join([TOR_BEGIN_SIG, signature, TOR_END_SIG])
+
+def chunkInto64CharsPerLine(data, separator=b'\n'):
+    """Chunk **data** into lines with 64 characters each.
+
+    :param basestring data: The data to be chunked up.
+    :keyword basestring separator: The character to use to join the chunked
+        lines. (default: ``b'\n'``)
+    :rtype: basestring
+    :returns: The **data**, as a string, with 64 characters (plus the
+        **separator** character), per line.
+    """
+    chunked = []
+
+    while len(data) > 0:
+        chunked.append(data[:64])
+        data = data[64:]
+
+    lines = separator.join(chunked)
+
+    return lines
+
+def convertToSmooshedFingerprint(fingerprint):
     """Convert to a space-delimited 40 character fingerprint
+
+    Given a 49-character string, such as one returned from
+    :func:`convertToSpaceyFingerprint`:
+      |
+      | 72C2 F0AE 1C14 F40E D37E D5F5 434B 6471 1A65 8E46
+      |
+
+    convert it to the following format:
+      |
+      | 72C2F0AE1C14F40ED37ED5F5434B64711A658E46
+      |
+
+    :param str fingerprint: A 49-character spacey fingerprint.
+    :rtype: bytes
+    :raises InvalidFingerprint: If the fingerprint isn't 49-bytes in length.
+    :returns: A 40-character smooshed fingerprint without spaces.
+    """
+    if len(fingerprint) != 49:
+        raise InvalidFingerprint("Invalid fingerprint (!= 49 bytes): %r"
+                                 % fingerprint)
+    return fingerprint.replace(' ', '')
+
+def convertToSpaceyFingerprint(fingerprint):
+    """Convert to a space-delimited 40-character fingerprint
 
     Given a 40 character string, usually the the SHA-1 hash of the
     DER encoding of an ASN.1 RSA public key, such as:
@@ -50,18 +166,70 @@ def convertToSpaceyFingerprint(fingerprint):
       | 72C2 F0AE 1C14 F40E D37E D5F5 434B 6471 1A65 8E46
       |
 
-    :param string fingerprint: A 40 character hex fingerprint.
-    :rtype: string
+    :param str fingerprint: A 40-character hex fingerprint.
+    :rtype: bytes
     :raises InvalidFingerprint: If the fingerprint isn't 40 bytes in length.
     :returns: A 4-character space-delimited fingerprint.
     """
     if len(fingerprint) != 40:
         raise InvalidFingerprint("Invalid fingerprint (< 40 bytes): %r"
                                  % fingerprint)
-    return " ".join([fingerprint[i:i+4] for i in xrange(0, 40, 4)])
+    return b" ".join([fingerprint[i:i+4] for i in range(0, 40, 4)])
 
-def makeOnionKeys(bridge=True, digest='sha1'):
-    """Make all the keys and certificates necessary to fake an OR.
+def digestDescriptorContent(content):
+    # Create the descriptor digest:
+    descriptorDigest = hashlib.sha1(content)
+    descriptorDigestBinary = descriptorDigest.digest()
+    descriptorDigestHex = descriptorDigest.hexdigest()
+    descriptorDigestHexUpper = descriptorDigestHex.upper()
+    descriptorDigestHexLower = descriptorDigestHex.lower()
+
+    # Remove the hex encoding:
+    descriptorDigestBytes = descriptorDigestHexLower.decode('hex_codec')
+
+    # And add PKCS#1 padding:
+    descriptorDigestPKCS1 = addPKCS1Padding(descriptorDigestBytes)
+
+    return (descriptorDigestBinary, descriptorDigestHexUpper, descriptorDigestPKCS1)
+
+def getASN1Sequence(privateKey):
+    """Get an ASN.1 DER sequence string representation of the key's public
+    modulus and exponent.
+
+    :type privateKey: ``Crypto.PublicKey.RSA``
+    :param privateKey: A private RSA key.
+    :rtype: bytes
+    :returns: The ASN.1 DER-encoded string representation of the public
+        portions of the **privateKey**.
+    """
+    seq = asn1.DerSequence()
+    seq.append(privateKey.n)
+    seq.append(privateKey.e)
+    asn1seqString = seq.encode()
+
+    return asn1seqString
+
+def getFingerprint(publicKey):
+    """Get a digest of the ASN.1 DER-encoded **publicKey**.
+
+    :type publicKey: str
+    :param publicKey: A public key (as within the return parameters of
+        :func:`generateOnionKey` or :func:`generateSigningKey`.)
+    :rtype: str
+    :returns: A spacey fingerprint.
+    """
+    keyDigest = hashlib.sha1(publicKey)
+    keyDigestBinary = keyDigest.digest()
+    keyDigestHex = keyDigest.hexdigest()
+    keyDigestHexUpper = keyDigestHex.upper()
+    keyDigestBytes = codecs.latin_1_encode(keyDigestHexUpper, 'replace')[0]
+
+    fingerprint = convertToSpaceyFingerprint(keyDigestBytes)
+
+    return (fingerprint, keyDigestBinary)
+
+def generateOnionKey():
+    """Generate a router's onion key, which is used to encrypt CERT cells.
 
     The encodings for the various key and descriptor digests needed are
     described in dir-spec.txt and tor-spec.txt, the latter mostly for the
@@ -95,117 +263,54 @@ def makeOnionKeys(bridge=True, digest='sha1'):
       | (signing) key.  (See 0.3 above.)
       |
 
-    :param boolean bridge: If False, generate a server OR ID key, a signing
-        key, and a TLS certificate/key pair. If True, generate a client ID key
-        as well.
-    :param string digest: The digest to use. (default: 'sha1')
-    :returns: The server ID key, and a tuple of strings (fingerprint,
-       onion-key, signing-key), where onion-key and secret key are the strings
-       which should directly go into a server-descriptor. There are a *ton* of
-       keys and certs in the this function. If you need more for some reason,
-       this is definitely the thing you want to modify.
+    :returns: A tuple of strings,
+       ``(onion-key-private, onion-key-public, onion-key-line)``, where
+       ``onion-key-line`` should directly go into a server-descriptor.
     """
-    serverID = rsa.createKey(True)
-    SIDSKey, SIDSCert, SIDPKey, SIDPCert = serverID
-    serverLinkCert = tls.createTLSLinkCert()
-    serverLinkCert.sign(SIDSKey, digest)
+    secretOnionKey = RSA.generate(1024) # generate an RSA key
+    publicOnionKey = getASN1Sequence(secretOnionKey) # ASN.1 encode it
+    publicOnionKeyB64 = base64.b64encode(publicOnionKey) # base64 encode it
+    
+    # Split the base64-encoded string into lines 64 characters long:
+    publicOnionKeyRaw = chunkInto64CharsPerLine(publicOnionKeyB64)
 
-    if bridge:
-        # For a bridge, a "client" ID key is used to generate the fingerprint
-        clientID = rsa.createKey(True)
-        CIDSKey, CIDSCert, CIDPKey, CIDPCert = clientID
+    # Add key header and footer:
+    onionKeyWithHeaders = addTorPKHeaderAndFooter(publicOnionKeyRaw)
+    onionKeyLine = TOKEN_ONION_KEY + onionKeyWithHeaders
 
-        # XXX I think we're missing some of the signatures
-        #     see torspec.git/tor-spec.txt §4.2 on CERTS cells
-        clientLinkCert = tls.createTLSLinkCert()
-        clientLinkCert.sign(CIDSKey, digest)
-    else:
-        CIDSKey, CIDSCert, CIDPKey, CIDPCert = serverID
+    return (secretOnionKey, publicOnionKey, onionKeyLine)
 
-    signing = rsa.createKey()
-    signSKey, signSCert, signPKey, signPCert = signing
-    onion = rsa.createKey()
-    onionSKey, onionSCert, onionPKey, onionPCert = onion
+def generateSigningKey():
+    secretSigningKey = RSA.generate(1024) # generate an RSA key
+    publicSigningKey = getASN1Sequence(secretSigningKey) # ASN.1 encode it
+    publicSigningKeyB64 = base64.b64encode(publicSigningKey) # base64 encode it
+    
+    # Split the base64-encoded string into lines 64 characters long:
+    publicSigningKeyRaw = chunkInto64CharsPerLine(publicSigningKeyB64)
 
-    onionKeyString   = 'onion-key\n%s' % tls.getPublicKey(onionPCert)
-    signingKeyString = 'signing-key\n%s' % tls.getPublicKey(signPCert)
+    # Add key header and footer:
+    signingKeyWithHeaders = addTorPKHeaderAndFooter(publicSigningKeyRaw)
 
-    return SIDSKey, SIDPCert, (onionKeyString, signingKeyString)
+    # Generate the new `signing-key` line for the descriptor:
+    signingKeyLine = TOKEN_SIGNING_KEY + signingKeyWithHeaders
 
-def signDescriptorDigest(key, descriptorDigest, digest='sha1'):
-    """Ugh...I hate OpenSSL.
+    return (secretSigningKey, publicSigningKey, signingKeyLine)
 
-    The extra-info-digest is a SHA-1 hash digest of the extrainfo document,
-    that is, the entire extrainfo descriptor up until the end of the
-    'router-signature' line and including the newline, but not the actual
-    signature.
+def signDescriptorContent(content, digest, privateKey):
+    # Generate a signature by signing the PKCS#1-padded digest with the
+    # private key:
+    (signatureLong, ) = privateKey.sign(digest, None)
+    signatureBytes = long_to_bytes(signatureLong, 128)
+    signatureBase64 = base64.b64encode(signatureBytes)
+    signature = chunkInto64CharsPerLine(signatureBase64)
 
-    The signature at the end of the extra-info descriptor is a signature of
-    the above extra-info-digest. This signature is appended to the end of the
-    extrainfo document, and the extra-info-digest is added to the
-    'extra-info-digest' line of the [bridge-]server-descriptor.
+    # Add the header and footer:
+    signatureWithHeaders = addTorSigHeaderAndFooter(signature)
 
-    The first one of these was created with a raw digest, the second with a
-    hexdigest. They both encode the the 'sha1' digest type if you check the
-    `-asnparse` output (instead of `-raw -hexdump`).
+    # Add the signature to the descriptor content:
+    routerSignatureLine = TOKEN_ROUTER_SIGNATURE + signatureWithHeaders
 
-    .. command:: openssl rsautl -inkey eiprivkey -verify -in eisig1 -raw -hexdump
-      |
-      | 0000 - 00 01 ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-      | 0010 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-      | 0020 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-      | 0030 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-      | 0040 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-      | 0050 - ff ff ff ff ff ff ff ff-ff ff ff ff 00 30 21 30   .............0!0
-      | 0060 - 09 06 05 2b 0e 03 02 1a-05 00 04 14 42 25 41 fb   ...+........B%A.
-      | 0070 - 82 ef 11 f4 5f 2c 95 53-67 2d bb fe 7f c2 34 7f   ...._,.Sg-....4.
+    rsStart = content.find(TOKEN_ROUTER_SIGNATURE)
+    content = content[:rsStart] + routerSignatureLine + b'\n'
 
-    .. command:: openssl rsautl -inkey eiprivkey -verify -in eisig2 -raw -hexdump
-      |
-      | 0000 - 00 01 ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-      | 0010 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-      | 0020 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-      | 0030 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-      | 0040 - ff ff ff ff ff ff ff ff-ff ff ff ff ff ff ff ff   ................
-      | 0050 - ff ff ff ff ff ff ff ff-ff ff ff ff 00 30 21 30   .............0!0
-      | 0060 - 09 06 05 2b 0e 03 02 1a-05 00 04 14 44 30 ab 90   ...+........D0..
-      | 0070 - 93 d1 08 21 df 87 c2 39-2a 04 1c a5 bb 34 44 cd   ...!...9*....4D.
-
-    .. todo:: See the RSA PKCS_ Standard v2.2 for why this function is totally
-       wrong.
-
-    .. _PKCS: http://www.emc.com/collateral/white-papers/h11300-pkcs-1v2-2-rsa-cryptography-standard-wp.pdf
-
-    :type key: :class:`OpenSSL.crypto.PKey`
-    :param key: An RSA private key.
-    :param string descriptorDigest: The raw SHA-1 digest of any descriptor
-        document.
-    :param string digest: The digest to use. (default: 'sha1')
-    """
-    sig = binascii.b2a_base64(OpenSSL.crypto.sign(key, descriptorDigest,
-                                                  digest))
-    sigCopy = sig
-    originalLength = len(sigCopy.replace('\n', ''))
-
-    # Only put 64 bytes of the base64 signature per line:
-    sigSplit = []
-    while len(sig) > 0:
-        sigSplit.append(sig[:64])
-        sig = sig[64:]
-    sigFormatted = '\n'.join(sigSplit)
-
-    sigFormattedCopy = sigFormatted
-    formattedLength = len(sigFormattedCopy.replace('\n', ''))
-
-    if originalLength != formattedLength:
-        print("WARNING: signDescriptorDocument(): %s"
-              % "possible bad reformatting for signature.")
-        print("DEBUG: signDescriptorDocument(): original=%d formatted=%d"
-              % (originalLength, formattedLength))
-        print("DEBUG: original:\n%s\nformatted:\n%s"
-              % (sigCopy, sigFormatted))
-
-    sigWithHeaders = const.TOR_BEGIN_SIG + '\n' \
-                     + sigFormatted \
-                     + const.TOR_END_SIG + '\n'
-    return sigWithHeaders
+    return content
