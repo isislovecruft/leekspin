@@ -1,3 +1,4 @@
 ipaddr==2.1.10
 PyNaCl==0.2.3
 PyOpenSSL==0.14
+pycrypto==2.6.1

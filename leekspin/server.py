@@ -17,6 +17,41 @@ from leekspin import crypto
 from leekspin import torversions
 
 
+def generateServerDescriptor(nick, fingerprint, timestamp,
+                             ipv4, ipv6, port, vers, protocols,
+                             uptime, bandwidth, extraInfoHexDigest,
+                             onionKeyLine, signingKeyLine, publicNTORKey,
+                             bridge=True):
+    doc = []
+
+    # TODO: non-bridge routers need real dirports and socksports
+    doc.append(b"router %s %s %s 0 0" % (nick, ipv4, port))
+    doc.append(b"or-address [%s]:%s" % (ipv6, port - 1))
+    doc.append(b"platform Tor %s on Linux" % vers)
+    doc.append(b"%s" % protocols)
+    doc.append(b"published %s" % timestamp)
+    doc.append(b"%s" % makeFingerprintLine(fingerprint, vers))
+    doc.append(b"uptime %s" % uptime)
+    doc.append(b"%s" % bandwidth)
+    doc.append(b"%s" % makeExtraInfoDigestLine(extraInfoHexDigest, vers))
+    doc.append(b"%s" % onionKeyLine)
+    doc.append(b"%s" % signingKeyLine)
+
+    if not bridge:
+        doc.append(b"%s" % makeHSDirLine(vers))
+
+    doc.append(b"contact Somebody <somebody@example.com>")
+
+    if publicNTORKey is not None:
+        doc.append(b"ntor-onion-key %s" % publicNTORKey)
+
+    doc.append(b"reject *:*")
+    doc.append(b"router-signature\n")
+
+    unsignedDescriptor = b'\n'.join(doc)
+
+    return unsignedDescriptor
+
 def makeProtocolsLine(version=None):
     """Generate an appropriate [bridge-]server-descriptor 'protocols' line.
 
@@ -24,10 +59,10 @@ def makeProtocolsLine(version=None):
     :rtype: str
     :returns: An '@type [bridge-]server-descriptor' 'protocols' line.
     """
-    line = ''
+    line = b''
     if (version is not None) and torversions.shouldHaveOptPrefix(version):
-        line += 'opt '
-    line += 'protocols Link 1 2 Circuit 1'
+        line += b'opt '
+    line += b'protocols Link 1 2 Circuit 1'
     return line
 
 def makeExtraInfoDigestLine(hexdigest, version):
@@ -44,10 +79,10 @@ def makeExtraInfoDigestLine(hexdigest, version):
     :returns: An ``@type [bridge-]server-descriptor`` 'extra-info-digest'
         line.
     """
-    line = ''
+    line = b''
     if (version is not None) and torversions.shouldHaveOptPrefix(version):
-        line += 'opt '
-    line += 'extra-info-digest %s' % hexdigest
+        line += b'opt '
+    line += b'extra-info-digest %s' % hexdigest
     return line
 
 def makeFingerprintLine(fingerprint, version=None):
@@ -64,10 +99,10 @@ def makeFingerprintLine(fingerprint, version=None):
     :rtype: string
     :returns: An '@type [bridge-]server-descriptor' 'published' line.
     """
-    line = ''
+    line = b''
     if (version is not None) and torversions.shouldHaveOptPrefix(version):
-        line += 'opt '
-    line += 'fingerprint %s' % crypto.convertToSpaceyFingerprint(fingerprint)
+        line += b'opt '
+    line += b'fingerprint %s' % fingerprint
     return line
 
 def makeBandwidthLine(variance=30):
@@ -121,7 +156,7 @@ def makeBandwidthLine(variance=30):
     bandwidths = [burst, observed]
     nitems = len(bandwidths) if (len(bandwidths) > 0) else float('nan')
     avg = int(math.ceil(float(sum(bandwidths)) / nitems))
-    line = "bandwidth %s %s %s" % (avg, burst, observed)
+    line = b"bandwidth %s %s %s" % (avg, burst, observed)
     return line
 
 def makeHSDirLine(version):
@@ -132,8 +167,8 @@ def makeHSDirLine(version):
     :returns: An ``@type [bridge-]server-descriptor`` 'hidden-service-dir'
         line.
     """
-    line = ''
+    line = b''
     if (version is not None) and torversions.shouldHaveOptPrefix(version):
-        line += 'opt '
-    line += 'hidden-service-dir'
+        line += b'opt '
+    line += b'hidden-service-dir'
     return line

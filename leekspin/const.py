@@ -31,16 +31,21 @@ from __future__ import unicode_literals
 
 
 #: Strings found in PEM-encoded objects created by Tor
-TOR_BEGIN_KEY = "-----BEGIN RSA PUBLIC KEY-----"
-TOR_END_KEY   = "-----END RSA PUBLIC KEY-----"
-TOR_BEGIN_SK  = "-----BEGIN RSA PRIVATE KEY-----"
-TOR_END_SK    = "-----END RSA PRIVATE KEY-----"
-TOR_BEGIN_SIG = "-----BEGIN SIGNATURE-----"
-TOR_END_SIG   = "-----END SIGNATURE-----"
+TOR_BEGIN_KEY = b"-----BEGIN RSA PUBLIC KEY-----"
+TOR_END_KEY   = b"-----END RSA PUBLIC KEY-----"
+TOR_BEGIN_SK  = b"-----BEGIN RSA PRIVATE KEY-----"
+TOR_END_SK    = b"-----END RSA PRIVATE KEY-----"
+TOR_BEGIN_SIG = b"-----BEGIN SIGNATURE-----"
+TOR_END_SIG   = b"-----END SIGNATURE-----"
+
+#: Tokens for ``@type [bridge-]server-descriptor``s
+TOKEN_SIGNING_KEY = b"signing-key\n"
+TOKEN_ONION_KEY = b"onion-key\n"
+TOKEN_ROUTER_SIGNATURE = b"router-signature\n"
 
 #: Strings found in PEM-encoded objects created by OpenSSL
-OPENSSL_BEGIN_KEY  = "-----BEGIN PRIVATE KEY-----"
-OPENSSL_END_KEY    = "-----END PRIVATE KEY-----"
-OPENSSL_BEGIN_CERT = "-----BEGIN CERTIFICATE-----"
-OPENSSL_END_CERT   = "-----END CERTIFICATE-----"
+OPENSSL_BEGIN_KEY  = b"-----BEGIN PRIVATE KEY-----"
+OPENSSL_END_KEY    = b"-----END PRIVATE KEY-----"
+OPENSSL_BEGIN_CERT = b"-----BEGIN CERTIFICATE-----"
+OPENSSL_END_CERT   = b"-----END CERTIFICATE-----"
 

@@ -113,7 +113,7 @@ def getNTORPublicKey(ntorSecretKey=None, base64=True):
             ntorPublicKey = ntorSecretKey.public_key
             if base64:
                 ntorPublicKey = binascii.b2a_base64(
-                    bytearray(str(ntorPublicKey))).rstrip('\n')
+                    bytearray(str(ntorPublicKey))).rstrip('\n').rstrip('==')
         except Exception as error:
             raise NTORPublicKeyError("Error retrieving the NTOR public key: %s"
                                      % error)
