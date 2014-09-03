@@ -65,6 +65,6 @@ coverage:
 	-firefox coverage-html/index.html
 
 upload: clean-all
-	python setup.py bdist_egg upload --sign
-	#python setup.py bdist_wheel upload --sign
-	python setup.py sdist upload --sign
+	torsocks python setup.py bdist_egg upload --sign
+	#torsocks python setup.py bdist_wheel upload --sign
+	torsocks python setup.py sdist upload --sign
