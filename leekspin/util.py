@@ -44,6 +44,11 @@ def getArgParser():
     group.title = "required arguments"
     group.add_argument("-n", "--descriptors", default=0,
                        help="generate <n> descriptor sets", type=int)
+
+    parser.add_argument("-r", "--relay", action="store_true",
+                        help=("generate relay descriptors (without this\n"
+                              "flag, bridge descriptor will be created)"))
+
     return parser
 
 def randomIP():
@@ -61,8 +66,16 @@ def randomIPv6():
     return ipaddr.IPv6Address(random.getrandbits(128))
 
 def randomPort():
-    """Get a random integer in the range [1024, 65535]."""
-    return random.randint(1025, 65535)
+    """Get a random integer in the range [1026, 65530].
+
+    The reason that port 1025 is missing is because the IPv6 port (in the
+    ``or-address``/``a`` lines), if there will be one, will be whatever the
+    random ORPort is, minus one.
+
+    The pluggable transport in the extrainfo descriptor (if there are any) are
+    calculated as the random ORPort, plus some.
+    """
+    return random.randint(1026, 65530)
 
 def getHexString(size):
     """Get a capitalised hexidecimal string ``size`` bytes long.

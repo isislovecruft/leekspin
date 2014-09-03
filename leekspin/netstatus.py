@@ -48,11 +48,15 @@ def generateBridgeNetstatus(nickname, idkey_digest, server_desc_digest,
         bw = int(bandwidth_line.split()[-1]) / 1024  # The 'observed' value
     dirport = dirport if dirport else 0
 
-    status = []
-    status.append("r %s %s %s %s %s %s %d" % (nickname, idb64, srvb64, timestamp,
-                                              ipv4, orport, dirport))
+    doc = []
+    doc.append(b"r %s %s %s %s %s %s %d"
+               % (nickname, idb64, srvb64, timestamp, ipv4, orport, dirport))
     if ipv6 is not None:
-        status.append("a [%s]:%s" % (ipv6, orport))
-    status.append("s %s\nw Bandwidth=%s\np reject 1-65535\n" % (flags, bw))
+        doc.append(b"a [%s]:%s" % (ipv6, orport - 1))
 
-    return '\n'.join(status)
+    doc.append(b"s %s" % flags)
+    doc.append(b"w Bandwidth=%s" % bw)
+    doc.append(b"p reject 1-65535\n")
+
+    netstatusDoc = b'\n'.join(doc)
+    return netstatusDoc

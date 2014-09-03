@@ -18,7 +18,7 @@ from leekspin import const
 from leekspin import util
 
 
-def generateExtraInfo(nickname, fingerprint, ts, ipv4, port):
+def generateExtraInfo(nickname, fingerprint, ts, ipv4, port, bridge=True):
     """Create an OR extra-info document.
 
     See §2.2 "Extra-info documents" in torspec.git/dir-spec.txt.
@@ -37,30 +37,35 @@ def generateExtraInfo(nickname, fingerprint, ts, ipv4, port):
     :rtype: str
     :returns: An extra-info document (unsigned).
     """
-    scramblesuitPassword = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
-
     extra = []
-    extra.append("extra-info %s %s" % (nickname, fingerprint))
-    extra.append("published %s" % ts)
-    extra.append("write-history %s (900 s) 3188736,2226176,2866176" % ts)
-    extra.append("read-history %s (900 s) 3891200,2483200,2698240" % ts)
-    extra.append("dirreq-write-history %s (900 s) 1024,0,2048" % ts)
-    extra.append("dirreq-read-history %s (900 s) 0,0,0" % ts)
-    extra.append("geoip-db-digest %s" % util.getHexString(40))
-    extra.append("geoip6-db-digest %s" % util.getHexString(40))
-    extra.append("dirreq-stats-end %s (86400 s)" % ts)
-    extra.append("dirreq-v3-ips")
-    extra.append("dirreq-v3-reqs")
-    extra.append("dirreq-v3-resp ok=16,not-enough-sigs=0,unavailable=0,not-found=0,not-modified=0,busy=0")
-    extra.append("dirreq-v3-direct-dl complete=0,timeout=0,running=0")
-    extra.append("dirreq-v3-tunneled-dl complete=12,timeout=0,running=0")
-    extra.append("transport obfs3 %s:%d" % (ipv4, port + 1))
-    extra.append("transport obfs2 %s:%d" % (ipv4, port + 2))
-    extra.append("transport scramblesuit %s:%d password=%s" % (ipv4, port + 3, scramblesuitPassword))
-    extra.append("bridge-stats-end %s (86400 s)" % ts)
-    extra.append("bridge-ips ca=8")
-    extra.append("bridge-ip-versions v4=8,v6=0")
-    extra.append("bridge-ip-transports <OR>=8")
-    extra.append("router-signature\n")
+    extra.append(b"extra-info %s %s" % (nickname, fingerprint))
+    extra.append(b"published %s" % ts)
+    extra.append(b"write-history %s (900 s) 3188736,2226176,2866176" % ts)
+    extra.append(b"read-history %s (900 s) 3891200,2483200,2698240" % ts)
+    extra.append(b"dirreq-write-history %s (900 s) 1024,0,2048" % ts)
+    extra.append(b"dirreq-read-history %s (900 s) 0,0,0" % ts)
+    extra.append(b"geoip-db-digest %s" % util.getHexString(40))
+    extra.append(b"geoip6-db-digest %s" % util.getHexString(40))
+    extra.append(b"dirreq-stats-end %s (86400 s)" % ts)
+    extra.append(b"dirreq-v3-ips")
+    extra.append(b"dirreq-v3-reqs")
+    extra.append(b"dirreq-v3-resp ok=16,not-enough-sigs=0,unavailable=0,not-found=0,not-modified=0,busy=0")
+    extra.append(b"dirreq-v3-direct-dl complete=0,timeout=0,running=0")
+    extra.append(b"dirreq-v3-tunneled-dl complete=12,timeout=0,running=0")
 
-    return '\n'.join(extra)
+    if bridge:
+        scramblesuitPassword = b'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+        extra.append(b"transport obfs3 %s:%d" % (ipv4, port + 1))
+        extra.append(b"transport obfs2 %s:%d" % (ipv4, port + 2))
+        extra.append(b"transport scramblesuit %s:%d password=%s" %
+                     (ipv4, port + 3, scramblesuitPassword))
+        extra.append(b"bridge-stats-end %s (86400 s)" % ts)
+        extra.append(b"bridge-ips ca=8")
+        extra.append(b"bridge-ip-versions v4=8,v6=0")
+        extra.append(b"bridge-ip-transports <OR>=8")
+
+    extra.append(b"router-signature\n")
+
+    extrainfoDoc = b'\n'.join(extra)
+
+    return extrainfoDoc
