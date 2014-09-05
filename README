@@ -51,6 +51,6 @@ Bugs
 
 Should you decide to use this tool, and especially should you be so insane and to try
 hacking on it, you will likely find bugs. You may find bugs in Leekspin, BridgeDB, Stem,
-Tor's `specifications <https://gitweb.torproject.org/torspec.git`_ , and possibly even in
+Tor's `specifications <https://gitweb.torproject.org/torspec.git>`_ , and possibly even in
 Tor. Please, for math's sake! Report them! The Tor developers will love you forever. You
 can `report bugs here on our issue tracker <https://trac.torproject.org>`_ .
