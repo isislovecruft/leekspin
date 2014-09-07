@@ -51,6 +51,22 @@ def getArgParser():
 
     return parser
 
+def _checkIPValidity(ip):
+    """Check that an IP address is valid.
+
+    :type ip: ``ipaddr.IPAddress``
+    :param ip: The ip address to check.
+    """
+    if (ip.is_link_local or
+        ip.is_loopback or
+        ip.is_multicast or
+        ip.is_private or
+        ip.is_unspecified or
+        ((ip.version == 6) and ip.is_site_local) or
+        ((ip.version == 4) and ip.is_reserved)):
+        return False
+    return True
+
 def randomIP():
     """Create a random IPv4 or IPv6 address."""
     maybe = int(random.getrandbits(1))
@@ -59,11 +75,25 @@ def randomIP():
 
 def randomIPv4():
     """Create a random IPv4 address."""
-    return ipaddr.IPv4Address(random.getrandbits(32))
+    validIP = None
+    while not validIP:
+        maybe = ipaddr.IPv4Address(random.getrandbits(32))
+        valid = _checkIPValidity(maybe)
+        if valid:
+            validIP = maybe
+            break
+    return validIP
 
 def randomIPv6():
     """Create a random IPv6 address."""
-    return ipaddr.IPv6Address(random.getrandbits(128))
+    validIP = None
+    while not validIP:
+        maybe = ipaddr.IPv6Address(random.getrandbits(128))
+        valid = _checkIPValidity(maybe)
+        if valid:
+            validIP = maybe
+            break
+    return validIP
 
 def randomPort():
     """Get a random integer in the range [1026, 65530].
