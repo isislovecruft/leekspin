@@ -67,4 +67,4 @@ coverage:
 upload: clean-all
 	torsocks python setup.py bdist_egg upload --sign
 	#torsocks python setup.py bdist_wheel upload --sign
-	torsocks python setup.py sdist upload --sign
+	torsocks python setup.py sdist --formats=gztar,zip upload --sign
