@@ -55,7 +55,16 @@ clean-build:
 clean-dist:
 	-rm -rf dist
 
-clean: clean-build clean-dist
+clean-descriptors:
+	-rm bridge-descriptors
+	-rm cached-extrainfo
+	-rm cached-extrainfo.new
+	-rm networkstatus-bridges
+	-rm cached-consensus
+	-rm cached-descriptors
+	-rm rendezvous-service-descriptors
+
+clean: clean-build clean-dist clean-descriptors
 
 clean-all: clean-emacs clean-pyc clean-build clean-dist
 
