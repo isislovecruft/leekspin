@@ -125,8 +125,8 @@ def create(count, bridge=True):
     :param int count: How many sets of descriptors to generate, i.e. how
         many mock bridges/relays to create.
     """
-    logging.info("Generating %d %sdescriptors..." %
-                 (int(count), 'bridge ' if bridge else ''))
+    logging.info("Generating %d %s descriptors..." %
+                 (int(count), 'bridge' if bridge else 'relay'))
     logging.info("Generated router nicknames:")
 
     server_descriptors    = list()
