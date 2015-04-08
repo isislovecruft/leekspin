@@ -55,7 +55,7 @@ And likewise to generate 20 hidden service descriptors, do::
 Bugs
 ========
 
-Should you decide to use this tool, and especially should you be so insane and
+Should you decide to use this tool, and especially should you be so insane as
 to try hacking on it, you will likely find bugs. You may find bugs in
 Leekspin, BridgeDB, Stem, Tor's
 `specifications <https://gitweb.torproject.org/torspec.git>`_ , and possibly
