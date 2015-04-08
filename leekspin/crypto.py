@@ -306,7 +306,29 @@ def getFingerprint(publicKey):
 
     return (fingerprint, keyDigestBinary)
 
-def generateOnionKey():
+def _generateRSAKey(bits=1024):
+    """Generate an RSA key, suitable for e.g. a router/bridge signing or onion
+    key, or an Hidden Service service or permanent key.
+
+    The encodings for the various key and descriptor digests needed are
+    described in dir-spec.txt and tor-spec.txt, the latter mostly for the
+    padding and encoding used in the creation of an OR's keys.
+
+    :param int bits: The length of the RSA key, in bits.
+    :returns: A tuple of strings, ``(key-private, key-public, key-line)``,
+       where ``key-line`` should be appropriate for placement directly into a
+       descriptor.
+    """
+    secretKey = RSA.generate(bits) # generate an RSA key
+    publicKey = getASN1Sequence(secretKey) # ASN.1 encode it
+    publicKeyB64 = base64.b64encode(publicKey) # base64 encode it
+
+    # Split the base64-encoded string into lines 64 characters long:
+    publicKeyNoHeaders = chunkInto64CharsPerLine(publicKeyB64)
+
+    return (secretKey, publicKey, publicKeyNoHeaders)
+
+def generateOnionKey(bits=1024):
     """Generate a router's onion key, which is used to encrypt CERT cells.
 
     The encodings for the various key and descriptor digests needed are
@@ -341,33 +363,36 @@ def generateOnionKey():
       | (signing) key.  (See 0.3 above.)
       |
 
+    :param int bits: The length of the RSA key, in bits.
     :returns: A tuple of strings,
        ``(onion-key-private, onion-key-public, onion-key-line)``, where
        ``onion-key-line`` should directly go into a server-descriptor.
     """
-    secretOnionKey = RSA.generate(1024) # generate an RSA key
-    publicOnionKey = getASN1Sequence(secretOnionKey) # ASN.1 encode it
-    publicOnionKeyB64 = base64.b64encode(publicOnionKey) # base64 encode it
-    
-    # Split the base64-encoded string into lines 64 characters long:
-    publicOnionKeyRaw = chunkInto64CharsPerLine(publicOnionKeyB64)
+    (secretOnionKey,
+     publicOnionKey,
+     publicOnionKeyNoHeaders) = _generateRSAKey(bits)
 
     # Add key header and footer:
-    onionKeyWithHeaders = addTorPKHeaderAndFooter(publicOnionKeyRaw)
+    onionKeyWithHeaders = addTorPKHeaderAndFooter(publicOnionKeyNoHeaders)
     onionKeyLine = TOKEN_ONION_KEY + onionKeyWithHeaders
 
     return (secretOnionKey, publicOnionKey, onionKeyLine)
 
-def generateSigningKey():
-    secretSigningKey = RSA.generate(1024) # generate an RSA key
-    publicSigningKey = getASN1Sequence(secretSigningKey) # ASN.1 encode it
-    publicSigningKeyB64 = base64.b64encode(publicSigningKey) # base64 encode it
-    
-    # Split the base64-encoded string into lines 64 characters long:
-    publicSigningKeyRaw = chunkInto64CharsPerLine(publicSigningKeyB64)
+def generateSigningKey(bits=1024):
+    """Generate a router's signing-key, which is used to sign e.g. descriptor
+    contents.
+
+    :param int bits: The length of the RSA key, in bits.
+    :returns: A tuple of strings, ``(signing-key-private, signing-key-public,
+       signing-key-line)``, where ``signign-key-line`` should directly go into
+       a descriptor.
+    """
+    (secretSigningKey,
+     publicSigningKey,
+     publicSigningKeyNoHeaders) = _generateRSAKey(bits)
 
     # Add key header and footer:
-    signingKeyWithHeaders = addTorPKHeaderAndFooter(publicSigningKeyRaw)
+    signingKeyWithHeaders = addTorPKHeaderAndFooter(publicSigningKeyNoHeaders)
 
     # Generate the new `signing-key` line for the descriptor:
     signingKeyLine = TOKEN_SIGNING_KEY + signingKeyWithHeaders
