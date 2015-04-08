@@ -143,7 +143,8 @@ def shouldHaveOptPrefix(version):
 
     :param str version: One of ``SERVER_VERSIONS``.
     :rtype: bool
-    :returns: True if we should include the ``'opt '`` prefix.
+    :returns: ``True`` if we should include the ``'opt '`` prefix; ``False``
+        otherwise.
     """
     changed_in  = Version('0.2.4.1-alpha', package='tor')
     our_version = Version(version, package='tor')
