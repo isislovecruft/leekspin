@@ -51,7 +51,9 @@ def getArgParser():
                             help="generate relay descriptors")
     descgroup1.add_argument("-b", "--bridge", action="store_true",
                             help="generate bridge descriptors")
-    descgroup1.set_defaults(relay=False, bridge=True)
+    descgroup1.add_argument("-hs", "--hidden-service", action="store_true",
+                            help="generate HS rendezvous descriptors")
+    descgroup1.set_defaults(relay=False, bridge=True, hidden_service=False)
 
     group = parser.add_argument_group()
     group.title = "required arguments"

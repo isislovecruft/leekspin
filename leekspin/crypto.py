@@ -399,7 +399,8 @@ def generateSigningKey(bits=1024):
 
     return (secretSigningKey, publicSigningKey, signingKeyLine)
 
-def signDescriptorContent(content, privateKey, digest=None):
+def signDescriptorContent(content, privateKey, digest=None,
+                          token=TOKEN_ROUTER_SIGNATURE):
     """Sign the **content** or the **digest** of the content, and postpend it
     to the **content**.
 
@@ -412,6 +413,8 @@ def signDescriptorContent(content, privateKey, digest=None):
         :func:`digestDescriptorContent`).  If the **digest** is given, then
         this **digest** will be signed.  Otherwise, if ``None``, then
         **contents** will be signed.
+    :param str token: The token to search for when appending the signature to
+        the end of the descriptor **content**
     """
     if digest is None:
         (_, _, digest) = digestDescriptorContent(content)
@@ -428,9 +431,9 @@ def signDescriptorContent(content, privateKey, digest=None):
     signatureWithHeaders = addTorSigHeaderAndFooter(signature)
 
     # Add the signature to the descriptor content:
-    routerSignatureLine = TOKEN_ROUTER_SIGNATURE + signatureWithHeaders
+    routerSignatureLine = token + signatureWithHeaders
 
-    rsStart = content.find(TOKEN_ROUTER_SIGNATURE)
+    rsStart = content.find(token)
     content = content[:rsStart] + routerSignatureLine + b'\n'
 
     return content

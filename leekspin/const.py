@@ -37,11 +37,22 @@ TOR_BEGIN_SK  = b"-----BEGIN RSA PRIVATE KEY-----"
 TOR_END_SK    = b"-----END RSA PRIVATE KEY-----"
 TOR_BEGIN_SIG = b"-----BEGIN SIGNATURE-----"
 TOR_END_SIG   = b"-----END SIGNATURE-----"
+TOR_BEGIN_MSG = b"-----BEGIN MESSAGE-----"
+TOR_END_MSG   = b"-----END MESSAGE-----"
 
 #: Tokens for ``@type [bridge-]server-descriptor``s
 TOKEN_SIGNING_KEY = b"signing-key\n"
 TOKEN_ONION_KEY = b"onion-key\n"
 TOKEN_ROUTER_SIGNATURE = b"router-signature\n"
+
+#: Tokens for ``@type rendezvous-service-descriptor``s
+TOKEN_REND_SERV         = b"rendezvous-service-descriptor "
+TOKEN_PERMANENT_KEY     = b"permanent-key\r\n"
+TOKEN_SECRET_ID_PART    = b"secret-id-part "
+TOKEN_HS_PUBLICATION    = b"publication-time "
+TOKEN_HS_PROTO_VERSIONS = b"protocol-versions "
+TOKEN_HS_INTRO_POINTS   = b"introduction-points\r\n"
+TOKEN_HS_SIGNATURE      = b"signature\r\n"
 
 #: Strings found in PEM-encoded objects created by OpenSSL
 OPENSSL_BEGIN_KEY  = b"-----BEGIN PRIVATE KEY-----"
