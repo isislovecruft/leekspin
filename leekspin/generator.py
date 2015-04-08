@@ -119,7 +119,7 @@ def generateDescriptors(bridge=True):
 
     return (extrainfoDesc, serverDesc, netstatusDesc)
 
-def create(count, bridge=True):
+def createRelayOrBridgeDescriptor(count, bridge=True):
     """Generate all types of descriptors and write them to files.
 
     :param int count: How many sets of descriptors to generate, i.e. how
@@ -194,3 +194,17 @@ def create(count, bridge=True):
         logging.info("Done.")
         code = 0
         sys.exit(code)
+
+def create(count, descriptorType=None):
+    """Create **count** descriptors of type **descriptor_type**.
+
+    :param int count: The number of descriptors to generate.
+    :type descriptorType: str or ``None``
+    :param descriptorType: One of ``"relay"``, ``"bridge"``,
+        ``"hidden_service"``, or ``None``.
+    """
+    logging.info("Creating descriptor type %s" % descriptorType)
+
+    if descriptorType in ('bridge', 'relay'):
+        bridge = bool(descriptorType == 'bridge')
+        createRelayOrBridgeDescriptors(count, bridge=bridge)

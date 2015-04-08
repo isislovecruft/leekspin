@@ -56,12 +56,12 @@ if __name__ == "__main__":
             print("%s" % parser.version)
             sys.exit(0)
 
-        bridge = True
+        descType = 'bridge'
         if options.relay:
-            bridge = False
+            descType = 'relay'
 
         if options.descriptors and (options.descriptors > 0):
-            generator.create(options.descriptors, bridge=bridge)
+            generator.create(options.descriptors, descriptorType=descType)
         else:
             raise SystemExit(parser.format_help())
 

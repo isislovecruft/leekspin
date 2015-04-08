@@ -43,14 +43,20 @@ def getArgParser():
     versionargs.add_argument("--version", action="store_true",
                              help="print leekspin version and exit")
 
+    descgroup = parser.add_argument_group()
+    descgroup.title = "descriptor types"
+    descgroup.argument_default = "--bridge"
+    descgroup1 = descgroup.add_mutually_exclusive_group()
+    descgroup1.add_argument("-r", "--relay", action="store_true",
+                            help="generate relay descriptors")
+    descgroup1.add_argument("-b", "--bridge", action="store_true",
+                            help="generate bridge descriptors")
+    descgroup1.set_defaults(relay=False, bridge=True)
+
     group = parser.add_argument_group()
     group.title = "required arguments"
     group.add_argument("-n", "--descriptors", default=0,
                        help="generate <n> descriptor sets", type=int)
-
-    parser.add_argument("-r", "--relay", action="store_true",
-                        help=("generate relay descriptors (without this\n"
-                              "flag, bridge descriptor will be created)"))
 
     return parser
 
