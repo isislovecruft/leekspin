@@ -31,14 +31,17 @@ def getArgParser():
     parser.description  = "Generate a signed set of network-status, "
     parser.description += "extra-info, and server descriptor documents "
     parser.description += "for mock Tor relays or bridges."
-    verbargs = parser.add_mutually_exclusive_group()
-    infoargs = parser.add_mutually_exclusive_group()
+
+    otherargs   = parser.add_mutually_exclusive_group()
+    infoargs = otherargs.add_mutually_exclusive_group()
     infoargs.add_argument("-v", "--verbose", action="store_true",
                           help="print information to stdout")
     infoargs.add_argument("-q", "--quiet", action="store_true",
                           help="don't print anything")
-    verbargs.add_argument("--version", action="store_true",
-                          help="print leekspin version and exit")
+
+    versionargs = parser.add_mutually_exclusive_group()
+    versionargs.add_argument("--version", action="store_true",
+                             help="print leekspin version and exit")
 
     group = parser.add_argument_group()
     group.title = "required arguments"
