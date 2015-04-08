@@ -5,9 +5,9 @@
 .. authors:: Isis Lovecruft <isis@torproject.org> 0xA3ADB67A2CDB8B35
              Matthew Finkel <sysrqb@torproject.org>
 .. licence:: see LICENSE file for licensing details
-.. copyright:: (c) 2013-2014 The Tor Project, Inc.
-               (c) 2013-2014 Isis Lovecruft
-               (c) 2013-2014 Matthew Finkel
+.. copyright:: (c) 2013-2015 The Tor Project, Inc.
+               (c) 2013-2015 Isis Lovecruft
+               (c) 2013-2015 Matthew Finkel
 """
 
 from __future__ import absolute_import
