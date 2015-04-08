@@ -122,7 +122,7 @@ def generateDescriptors(bridge=True):
 def create(count, bridge=True):
     """Generate all types of descriptors and write them to files.
 
-    :param integer count: How many sets of descriptors to generate, i.e. how
+    :param int count: How many sets of descriptors to generate, i.e. how
         many mock bridges/relays to create.
     """
     logging.info("Generating %d %sdescriptors..." %
