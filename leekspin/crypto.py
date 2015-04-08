@@ -28,11 +28,11 @@ import base64
 import binascii
 import codecs
 import hashlib
+import struct
 import sys
 
 from Crypto.PublicKey import RSA
 from Crypto.Util import asn1
-from Crypto.Util.number import long_to_bytes
 
 import OpenSSL.crypto
 
@@ -107,6 +107,84 @@ def addTorSigHeaderAndFooter(signature):
     :returns: The same signature, with the headers which Tor uses around it.
     """
     return b'\n'.join([TOR_BEGIN_SIG, signature, TOR_END_SIG])
+
+def bytesToLong(bites):
+    """Convert a byte string to a long integer.
+
+    This function was stolen from BridgeDB, from
+    https://github.com/isislovecruft/bridgedb/commit/5ed5c42ec7ef908991a67cf0cddf714f74e35f7e.
+
+    >>> from bridgedb.crypto import bytesToLong
+    >>> bytesToLong('\x059')
+    1337L
+    >>> bytesToLong('I\x96\x02\xd2')
+    1234567890L
+    >>> bytesToLong('\x00\x00\x00\x00I\x96\x02\xd2')
+    1234567890L
+    >>> bytesToLong('\xabT\xa9\x8c\xeb\x1f\n\xd2')
+    12345678901234567890L
+
+    :param bytes bites: The byte string to convert.
+    :rtype: long
+    """
+    length = len(bites)
+    if length % 4:
+        extra = (4 - length % 4)
+        bites = b'\000' * extra + bites
+        length = length + extra
+
+    acc = 0L
+    for index in range(0, length, 4):
+        acc = (acc << 32) + struct.unpack(b'>I', bites[index:index+4])[0]
+
+    return acc
+
+def longToBytes(number, blocksize=0):
+    """Convert a long integer to a byte string.
+
+    This function was stolen from BridgeDB, from
+    https://github.com/isislovecruft/bridgedb/commit/5ed5c42ec7ef908991a67cf0cddf714f74e35f7e.
+
+    >>> from bridgedb.crypto import longToBytes
+    >>> longToBytes(1337L)
+    '\x059'
+    >>> longToBytes(1234567890L)
+    'I\x96\x02\xd2'
+    >>> longToBytes(1234567890L, blocksize=8)
+    '\x00\x00\x00\x00I\x96\x02\xd2'
+    >>> longToBytes(12345678901234567890L)
+    '\xabT\xa9\x8c\xeb\x1f\n\xd2'
+
+    :param int number: The long integer to convert.
+    :param int blocksize: If **blocksize** is given and greater than zero, pad
+        the front of the byte string with binary zeros so that the length is a
+        multiple of **blocksize**.
+    :rtype: bytes
+    """
+    bites = b''
+    number = long(number)
+
+    # Convert the number to a byte string
+    while number > 0:
+        bites = struct.pack(b'>I', number & 0xffffffffL) + bites
+        number = number >> 32
+
+    # Strip off any leading zeros
+    for index in range(len(bites)):
+        if bites[index] != b'\000'[0]:
+            break
+    else:
+        # Only happens when number == 0:
+        bites = b'\000'
+        index = 0
+    bites = bites[index:]
+
+    # Add back some padding bytes.  This could be done more efficiently
+    # w.r.t. the de-padding being done above, but sigh...
+    if blocksize > 0 and len(bites) % blocksize:
+        bites = (blocksize - len(bites) % blocksize) * b'\000' + bites
+
+    return bytes(bites)
 
 def chunkInto64CharsPerLine(data, separator=b'\n'):
     """Chunk **data** into lines with 64 characters each.
@@ -300,7 +378,8 @@ def signDescriptorContent(content, digest, privateKey):
     # Generate a signature by signing the PKCS#1-padded digest with the
     # private key:
     (signatureLong, ) = privateKey.sign(digest, None)
-    signatureBytes = long_to_bytes(signatureLong, 128)
+
+    signatureBytes = longToBytes(signatureLong, 128)
     signatureBase64 = base64.b64encode(signatureBytes)
     signature = chunkInto64CharsPerLine(signatureBase64)
 
