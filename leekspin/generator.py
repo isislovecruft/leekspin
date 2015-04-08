@@ -15,6 +15,7 @@ from __future__ import print_function
 
 from codecs import open as open
 
+import base64
 import hashlib
 import logging
 import random
@@ -39,6 +40,7 @@ from leekspin import extrainfo
 from leekspin import netstatus
 from leekspin import nicknames
 from leekspin import ntor
+from leekspin import rendezvous
 from leekspin import server
 from leekspin import tls
 from leekspin import torversions
@@ -119,7 +121,98 @@ def generateDescriptors(bridge=True):
 
     return (extrainfoDesc, serverDesc, netstatusDesc)
 
-def createRelayOrBridgeDescriptor(count, bridge=True):
+def generateHSDesc(replica):
+    import time
+
+    vers = torversions.getRandomVersion()
+    versionsLine = rendezvous.generateVersionLine(vers)
+    protocolVersionsLine = rendezvous.generateProtocolVersionsLine(vers)
+
+    (secretPermanentKey,
+     publicPermanentKey,
+     permanentKeyLine) = rendezvous.generatePermanentKey()
+
+    (secretSigningKey,
+     publicSigningKey,
+     signingKeyLine) = crypto.generateSigningKey()
+
+    # TODO: Make generation of permanent_ids deal with HS "stealth" authorisation.
+    permanentID = rendezvous.generatePermanentID(publicPermanentKey)
+
+    # TODO: Implement per-client session-keys / descriptor cookies, see
+    #       rend-spec.txt §2.1.
+    descCookie = rendezvous.createDescriptorCookie()
+    descCookieB64 = base64.b64encode(descCookie)#.strip("=")
+    # see rendclient.c rend_parse_service_authorization()↑↑↑
+
+    logging.info(("# Generated HS .onion address: %s\n"
+                  "# Generated HS descriptor cookie: %s") %
+                 (permanentID.encode("hex") + ".onion", descCookieB64))
+
+    currentTime = int(time.time())
+    publicationTimeLine = rendezvous.generatePublicationTimeLine(currentTime)
+    (secretIDPart,
+     secretIDLine) = rendezvous.calculateSecretIDPart(permanentID, currentTime,
+                                                      descCookieB64, replica)
+    introductionPoints = rendezvous.generateIntroPoints(descCookieB64)
+    rendServiceLine = rendezvous.generateRendServiceLine(permanentID,
+                                                         secretIDPart, replica)
+    d = []
+    d.append(rendServiceLine)
+    d.append(versionsLine)
+    d.append(permanentKeyLine)
+    d.append(secretIDLine)
+    d.append(publicationTimeLine)
+    d.append(protocolVersionsLine)
+    d.append(introductionPoints)
+    d.append(const.TOKEN_HS_SIGNATURE)
+
+    document = "\r\n".join(d) + "\r\n"
+    (_, _, documentDigestPKCS1) = crypto.digestDescriptorContent(document)
+    descriptor = crypto.signDescriptorContent(document, secretSigningKey,
+                                              token=const.TOKEN_HS_SIGNATURE)
+    # "router-signature" is for relay/bridge descriptor signatures; we have to
+    # replace it with just "signature":
+    descriptor = descriptor.replace("router-signature", "signature")
+    logging.info("%s\n" % descriptor)
+
+    return descriptor
+
+def createHiddenServiceDescriptors(count, replicas=2):
+    """Generate hidden service descriptors.
+
+    :param int count: How many sets of descriptors to generate.
+    """
+    logging.info("Generating %d hidden service descriptors..." % count)
+
+    rendDescriptors = list()
+
+    try:
+        for i in range(int(count)):
+            # Create replicas from [1, **replicas**], inclusive:
+            for j in range(1, int(replicas)):
+                desc = generateHSDesc(j)
+                rendDescriptors.append(desc)
+    except KeyboardInterrupt as keyint:
+        logging.warn("Received keyboard interrupt.")
+        logging.warn("Stopping descriptor creation and exiting.")
+        code = 1515
+    except Exception as error:
+        logging.exception(error)
+    finally:
+        logging.info("Writing descriptors to files...")
+
+        descriptorFiles = {
+                "rendezvous-service-descriptors": '\n'.join(rendDescriptors)}
+
+        for fn, giantstring in descriptorFiles.items():
+            util.writeDescToFile(fn, giantstring)
+
+        logging.info("Done.")
+        code = 0
+        sys.exit(code)
+
+def createRelayOrBridgeDescriptors(count, bridge=True):
     """Generate all types of descriptors and write them to files.
 
     :param int count: How many sets of descriptors to generate, i.e. how
@@ -208,3 +301,5 @@ def create(count, descriptorType=None):
     if descriptorType in ('bridge', 'relay'):
         bridge = bool(descriptorType == 'bridge')
         createRelayOrBridgeDescriptors(count, bridge=bridge)
+    elif descriptorType in ('hidden_service',):
+        createHiddenServiceDescriptors(count)

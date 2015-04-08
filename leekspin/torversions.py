@@ -152,6 +152,22 @@ def shouldHaveOptPrefix(version):
         return True
     return False
 
+def shouldSupportHSIntroV0(version):
+    """Returns true if a Hidden Service is old enough to support the Hidden
+    Service intro protocol version 0.
+
+    See :func:`leekspin.rendezvous.generateProtocolVersionsLine`.
+
+    :param str version: One of ``SERVER_VERSIONS``.
+    :rtype: bool
+    :returns: ``True`` if we should include the intro protocol version 0;
+        ``False`` otherwise.
+    """
+    changed_in  = Version('0.2.0.7-alpha', package='tor')
+    our_version = Version(version, package='tor')
+    if our_version < changed_in:
+        return True
+    return False
 
 @_comparable
 class _inf(object):
