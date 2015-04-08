@@ -91,8 +91,8 @@ def generateDescriptors(bridge=True):
      extrainfoDigest,
      extrainfoDigestPKCS1) = crypto.digestDescriptorContent(extrainfoDoc)
     extrainfoDesc = crypto.signDescriptorContent(extrainfoDoc,
-                                                 extrainfoDigestPKCS1,
-                                                 secretSigningKey)
+                                                 secretSigningKey,
+                                                 digest=extrainfoDigestPKCS1)
 
     serverDoc = server.generateServerDescriptor(nick, fingerprintSpacey,
                                                 timestamp, ipv4, ipv6, port,
@@ -108,8 +108,8 @@ def generateDescriptors(bridge=True):
         serverDoc = b'@purpose bridge\n' + serverDoc
 
     serverDesc = crypto.signDescriptorContent(serverDoc,
-                                              serverDigestPKCS1,
-                                              secretSigningKey)
+                                              secretSigningKey,
+                                              digest=serverDigestPKCS1)
 
     netstatusDesc = netstatus.generateBridgeNetstatus(nick, fingerprintBinary,
                                                       serverDigestBinary,

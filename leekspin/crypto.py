@@ -399,7 +399,23 @@ def generateSigningKey(bits=1024):
 
     return (secretSigningKey, publicSigningKey, signingKeyLine)
 
-def signDescriptorContent(content, digest, privateKey):
+def signDescriptorContent(content, privateKey, digest=None):
+    """Sign the **content** or the **digest** of the content, and postpend it
+    to the **content**.
+
+    :param str content: The contents of a descriptor.
+    :type privateKey: ``Crypto.PublicKey.RSA``
+    :param privateKey: A private RSA key.
+    :type digest: str or ``None``
+    :param digest: If given, this should be the PKCS#1-padded binary digest of
+        the descriptor contents (i.e. the third return value from
+        :func:`digestDescriptorContent`).  If the **digest** is given, then
+        this **digest** will be signed.  Otherwise, if ``None``, then
+        **contents** will be signed.
+    """
+    if digest is None:
+        (_, _, digest) = digestDescriptorContent(content)
+
     # Generate a signature by signing the PKCS#1-padded digest with the
     # private key:
     (signatureLong, ) = privateKey.sign(digest, None)
