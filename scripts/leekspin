@@ -37,8 +37,6 @@ import sys
 from leekspin import generator
 from leekspin import util
 
-logging.getLogger('leekspin').setLevel(10)
-
 
 if __name__ == "__main__":
     try:
@@ -46,11 +44,11 @@ if __name__ == "__main__":
         options = parser.parse_args()
 
         if options.verbose:
-            logging.getLogger('leekspin').addHandler(logging.StreamHandler())
-            logging.getLogger('leekspin').setLevel(10)
-        elif options.quiet:
+            logging.getLogger().addHandler(logging.StreamHandler())
+            logging.getLogger().setLevel(10)
+        else:
             print = lambda x: True
-            logging.ignore(100)
+            logging.disable(100)
 
         if options.version:
             print("%s" % parser.version)
