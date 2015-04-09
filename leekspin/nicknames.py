@@ -1,14 +1,7 @@
 # -*- coding: utf-8 -*-
 
-"""Onion Router nickname generator for making descriptors easily searchable.
+"""Onion Router nickname generator for making descriptors easily searchable."""
 
-.. authors:: Isis Lovecruft <isis@torproject.org> 0xA3ADB67A2CDB8B35
-             Matthew Finkel <sysrqb@torproject.org>
-.. licence:: see LICENSE file for licensing details
-.. copyright:: (c) 2013-2014 The Tor Project, Inc.
-               (c) 2013-2014 Isis Lovecruft
-               (c) 2013-2014 Matthew Finkel
-"""
 
 from __future__ import absolute_import
 from __future__ import print_function
@@ -23,15 +16,23 @@ import string
 
 logging.getLogger('leekspin')
 
-
+#: The dictionary file to read in order to generate the nickname wordlist.
 DICTIONARY_FILE          = '/usr/share/dict/words'
+#: The maximum allowed length for an OR nickname.
 NICKNAME_LENGTH_MAX      = 19
+#: The minimum allowed length for an OR nickname.
 NICKNAME_LENGTH_MIN      = 1
+#: Even if we've already hit th ``NICKNAME_LENGTH_MIN``, try to add more words
+#: until the OR nickname is at least this long.
 NICKNAME_LENGTH_PREF_MIN = 10
 
 
 def _createWordsForNicks():
-    """Create a list of words used to generate random OR nicknames."""
+    """Create a list of words used to generate random OR nicknames.
+
+    :rtype: list
+    :returns: A list of words suitable for an OR nickname.
+    """
     allowedChars = string.letters + string.digits
     wordlist = []
     if os.path.isfile(DICTIONARY_FILE) and os.access(DICTIONARY_FILE, os.R_OK):
@@ -77,7 +78,12 @@ def _getRandomWord(minlength=NICKNAME_LENGTH_MIN, maxlength=NICKNAME_LENGTH_MAX)
     return picked
 
 def generateNickname(maxlength=NICKNAME_LENGTH_MAX):
-    """Generate a random alphanumeric nickname conforming to the specified length."""
+    """Generate a random alphanumeric nickname conforming to the specified length.
+
+    :param int maxlength: The maximum length for any OR nickname generated.
+    :rtype: str
+    :returns: A randomly generated relay nickname.
+    """
     if len(_words) == 0:  # if there was no /usr/share/dict/words file
         return "Unnamed"
 

@@ -1,22 +1,11 @@
 # -*- coding: utf-8 -*-
 
-"""torversions ― Parsers for Tor version numbers.
+"""Parsers for Tor version numbers.
 
 Portions of this module are directly taken from, or derived from,
-:api:twisted.python.compat, and are subject to the Twisted Matrix Labs
+:api:`twisted.python.compat`, and are subject to the Twisted Matrix Labs
 copyright and license, in addition to the copyrights and license for the rest
 of this program.
-
-**Module Overview:**
-
-::
-
-  getRandomVersion - Get a random Tor version from SERVER_VERSIONS.
-  shouldHaveOptPrefix - Test if a Tor version should have the 'opt ' prefix.
-  Version
-   |_ base - Get the base version number (with prerelease).
-   +_ getPrefixedPrerelease - Get the prerelease string.
-
 """
 
 from __future__ import absolute_import
@@ -65,12 +54,12 @@ class InvalidVersion(ValueError):
 
 
 def _comparable(klass):
-    """Class decorator that ensures support for the special C{__cmp__} method.
+    """Class decorator that ensures support for the special :meth:`__cmp__` method.
 
     On Python 2 this does nothing.
 
-    On Python 3, C{__eq__}, C{__lt__}, etc. methods are added to the class,
-    relying on C{__cmp__} to implement their comparisons.
+    On Python 3, :meth:`__eq__`, :meth:`__lt__`, etc. methods are added to the
+    class, relying on :meth:`__cmp__` to implement their comparisons.
     """
     # On Python 2, __cmp__ will just work, so no need to add extra methods:
     if not _PY3:
@@ -124,7 +113,7 @@ def getRandomVersion():
     """Get a random Tor version from ``server-versions`` in the consensus.
 
     :rtype: str
-    :returns: One of ``SERVER_VERSIONS``.
+    :returns: One of :data:`SERVER_VERSIONS`.
     """
     vers = random.choice(SERVER_VERSIONS)
     return vers
@@ -134,16 +123,18 @@ def shouldHaveOptPrefix(version):
     with ``'opt '``.
 
     In tor, up to and including, version 0.2.3.25, server-descriptors (bridge
-    or regular) prefixed several lines with ``'opt '``. For the 0.2.3.x
+    or relay) prefixed several lines with ``'opt '``. For the 0.2.3.x
     series, these lines were:
-        - 'protocols'
-        - 'fingerprint'
-        - 'hidden-service-dir'
-        - 'extra-info-digest'
 
-    :param str version: One of ``SERVER_VERSIONS``.
+     - ``protocols``
+     - ``fingerprint``
+     - ``hidden-service-dir``
+     - ``extra-info-digest``
+
+    :param str version: One of :data:`SERVER_VERSIONS`.
     :rtype: bool
-    :returns: True if we should include the ``'opt '`` prefix.
+    :returns: ``True`` if we should include the ``'opt '`` prefix; ``False``
+        otherwise.
     """
     changed_in  = Version('0.2.4.1-alpha', package='tor')
     our_version = Version(version, package='tor')
@@ -151,10 +142,26 @@ def shouldHaveOptPrefix(version):
         return True
     return False
 
+def shouldSupportHSIntroV0(version):
+    """Returns true if a Hidden Service is old enough to support the Hidden
+    Service intro protocol version 0.
+
+    See :func:`~leekspin.rendezvous.generateProtocolVersionsLine`.
+
+    :param str version: One of :data:`SERVER_VERSIONS`.
+    :rtype: bool
+    :returns: ``True`` if we should include the intro protocol version 0;
+        ``False`` otherwise.
+    """
+    changed_in  = Version('0.2.0.7-alpha', package='tor')
+    our_version = Version(version, package='tor')
+    if our_version < changed_in:
+        return True
+    return False
 
 @_comparable
 class _inf(object):
-    """An object that is bigger than all other objects."""
+    """An object that is ∞ bigger than all other objects."""
     def __cmp__(self, other):
         """Compare another object with this infinite one.
 
@@ -180,18 +187,20 @@ class Version(object):
     :attr str minor: The minor version number.
     :attr str micro: The micro version number.
     :attr str prerelease: Sometimes another number, or ``alpha``/``rc2``/etc.,
-                          often suffixed with a ``-``, ``+``, or ``#``.
+         often suffixed with a ``-``, ``+``, or ``#``.
     """
     def __init__(self, version, package=None):
         """Create a version object.
 
-        Comparisons may be computed between instances of :class:`Version`s.
-        This is modified from the original Twisted class because Tor's
-        versioning system uses four integers, separated by ``'.'``s, so the
-        ``prerelease`` attribute and all methods using it accomodate for Tor's
-        version strings (though the standard
-        ``<major>.<minor>.<micro>-<prerelease>`` version format will work just
-        the same as it does with the unmodified Twisted class).
+        Comparisons may be computed between instances of :class:`Version`.
+
+        .. note:: This class was modified from the original Twisted class
+            (:api:`twisted.python.versions.Version`) because Tor's versioning
+            system uses four integers, separated by ``.``, so that the
+            ``prerelease`` attribute, and all methods using it, can accomodate
+            for the idiosyncracies in Tor's version strings.  The standard
+            ``<major>.<minor>.<micro>-<prerelease>`` version format will also
+            work just the same as it does with the unmodified Twisted class.
 
         >>> ver = torversions.Version('0.2.5.1-alpha', 'tor')
         >>> ver.base
@@ -206,11 +215,10 @@ class Version(object):
         tor
 
 
-        :param string version: One of ``SERVER_VERSIONS``.
+        :param string version: One of :data:`SERVER_VERSIONS`.
         :param string package: The package or program which we are creating a
-                               version number for, i.e. for
-                               "tor-0.2.5.1-alpha" the **package** would be
-                               "tor".
+             version number for, i.e. for ``"tor-0.2.5.1-alpha"`` the
+             **package** would be ``"tor"``.
         """
         if version.find('.') == -1:
             raise InvalidVersion("%r isn't a valid version string!" % version)
@@ -237,21 +245,21 @@ class Version(object):
 
         :rtype: str
         :returns: A version number, without the package/program name, and with
-                  the prefix (if available). For example: ``'0.2.5.1-alpha'``.
+             the :attr:`prefix` (if available). For example:
+             ``"0.2.5.1-alpha"``.
         """
         baseVersion = '%d.%d.%d%s' % (self.major, self.minor, self.micro,
                                       self.getPrefixedPrerelease())
         return baseVersion
 
     def getPrefixedPrerelease(self, separator='.'):
-        """Get the prerelease string, prefixed by the separator ``prefix``.
+        """Get the prerelease string, prefixed by the separator :attr:`prefix`.
 
         :param str separator: The separator to use between the rest of the
-                              version string and the **prerelease** string.
-                              (default: '.')
+             version string and the **prerelease** string.
         :rtype: str
-        :returns: The **separator** plus the ``Version.prefix``, for example
-                  ``'.1-alpha'``.
+        :returns: The **separator** plus the :attr:`prefix`, for example
+            ``".1-alpha"``.
         """
         prefixed = ''
         if self.prerelease is not None:
@@ -266,7 +274,7 @@ class Version(object):
 
     def __str__(self):
         """Return the package name and version in string form, i.e.
-        ``'tor-0.2.24'``.
+        ``"tor-0.2.24"``.
         """
         if self.package:
             versionstr = str(self.package) + '-'
@@ -284,9 +292,10 @@ class Version(object):
         :type other: :class:`Version`
         :param other: Another version.
         :raise IncomparableVersions: When the package names of the versions
-                                     differ.
-        :returns: NotImplemented when the other object is not a Version, or
-            one of -1, 0, or 1.
+            differ.
+        :rtype: int
+        :returns: :exc:`exceptions.NotImplemented` when the other object is
+            not a :class:`Version`.  Otherwise one of ``-1``, ``0``, or ``1``.
         """
         if not isinstance(other, self.__class__):
             return NotImplemented

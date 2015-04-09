@@ -1,0 +1,8 @@
+# These are the required dependencies for building BridgeDB's Sphinx
+# documentation. You will also need all the requirements listed in
+# requirements.txt.
+
+sphinxjp.themes.basicstrap==0.3.1
+sphinx-argparse==0.1.4
+sphinxcontrib-fulltoc==1.0
+docutils==0.11

@@ -1,14 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Main leekspin module for generating descriptors and writing to disk.
-
-.. authors:: Isis Lovecruft <isis@torproject.org> 0xA3ADB67A2CDB8B35
-             Matthew Finkel <sysrqb@torproject.org>
-.. licence:: see LICENSE file for licensing details
-.. copyright:: (c) 2013-2014 The Tor Project, Inc.
-               (c) 2013-2014 Isis Lovecruft
-               (c) 2013-2014 Matthew Finkel
-"""
+"""Functions for creating mock ``extrainfo`` descriptors."""
 
 from __future__ import absolute_import
 from __future__ import print_function
@@ -24,12 +16,15 @@ from leekspin import util
 def generateExtraInfo(nickname, fingerprint, ts, ipv4, port, bridge=True):
     """Create an OR extra-info document.
 
-    See §2.2 "Extra-info documents" in torspec.git/dir-spec.txt.
+    See §2.2 "Extra-info documents" in dir-spec.txt_.
 
     For ``transport scramblesuit`` lines, the ``password`` parameter *always*
     is ``ABCDEFGHIJKLMNOPQRSTUVWXYZ234567``, i.e.::
 
         transport scramblesuit 10.0.1.111:4444 password=ABCDEFGHIJKLMNOPQRSTUVWXYZ234567
+
+
+    .. _dir-spec.txt: https://gitweb.torproject.org/torspec.git/tree/dir-spec.txt
 
     :param str nickname: The router's nickname.
     :param str fingerprint: A space-separated, hex-encoded, SHA-1 digest of

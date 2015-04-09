@@ -22,9 +22,9 @@
 .. authors:: Isis Lovecruft <isis@torproject.org> 0xA3ADB67A2CDB8B35
              Matthew Finkel <sysrqb@torproject.org>
 .. licence:: see LICENSE file for licensing details
-.. copyright:: (c) 2013-2014 The Tor Project, Inc.
-               (c) 2013-2014 Isis Lovecruft
-               (c) 2013-2014 Matthew Finkel
+.. copyright:: (c) 2013-2015 The Tor Project, Inc.
+               (c) 2013-2015 Isis Lovecruft
+               (c) 2013-2015 Matthew Finkel
 """
 
 from __future__ import absolute_import
@@ -37,8 +37,6 @@ import sys
 from leekspin import generator
 from leekspin import util
 
-logging.getLogger('leekspin').setLevel(10)
-
 
 if __name__ == "__main__":
     try:
@@ -46,22 +44,24 @@ if __name__ == "__main__":
         options = parser.parse_args()
 
         if options.verbose:
-            logging.getLogger('leekspin').addHandler(logging.StreamHandler())
-            logging.getLogger('leekspin').setLevel(10)
-        elif options.quiet:
+            logging.getLogger().addHandler(logging.StreamHandler())
+            logging.getLogger().setLevel(10)
+        else:
             print = lambda x: True
-            logging.ignore(100)
+            logging.disable(100)
 
         if options.version:
             print("%s" % parser.version)
             sys.exit(0)
 
-        bridge = True
+        descType = 'bridge'
         if options.relay:
-            bridge = False
+            descType = 'relay'
+        elif options.hidden_service:
+            descType = 'hidden_service'
 
         if options.descriptors and (options.descriptors > 0):
-            generator.create(options.descriptors, bridge=bridge)
+            generator.create(options.descriptors, descriptorType=descType)
         else:
             raise SystemExit(parser.format_help())
 
