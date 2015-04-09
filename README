@@ -47,8 +47,8 @@ Services within the Tor network.
 Installing
 ==========
 
-The very simplest way, if you use
- `pip <http://www.pip-installer.org/en/latest/>`_ , would be to do::
+The very simplest way, if you use  `pip <http://www.pip-installer.org/en/latest/>`_, would
+be to do::
 
     $ pip install leekspin
 
