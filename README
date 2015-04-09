@@ -42,7 +42,7 @@ Services within the Tor network.
 .. |Coverage Status| image:: https://coveralls.io/repos/isislovecruft/leekspin/badge.png?branch=develop
    :target: https://coveralls.io/r/isislovecruft/leekspin?branch=develop
 .. _Isis Lovecruft: https://fyb.patternsinthevoid.net
-.. _LICENSE: https://github.com/isislovecruft/leekspin/LICENSE
+.. _LICENSE: https://github.com/isislovecruft/leekspin/blob/develop/LICENSE
 
 
 Installing
