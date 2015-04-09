@@ -4,8 +4,9 @@
  Leekspin  |Latest Version|
 ############################
 
-.. image:: _static/Loituma.gif
-    :align: center
+.. image::
+    https://raw.githubusercontent.com/isislovecruft/leekspin/develop/doc/sphinx/source/_static/Loituma.gif
+
 
 **************************************
  An Onion Router descriptor generator
