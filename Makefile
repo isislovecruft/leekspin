@@ -13,6 +13,8 @@
 .PHONY: install test
 .DEFAULT: install test
 
+VERSION:=$(shell git describe)
+
 all:
 	python setup.py build
 
@@ -40,6 +42,12 @@ uninstall:
 	rm installed-files.txt
 
 reinstall: uninstall force-install
+
+docs:
+	python setup.py build_sphinx --version "$(VERSION)"
+	cd build/sphinx/html && \
+		zip -r ../"$(VERSION)"-docs.zip ./ && \
+		echo "Your package documents are in build/sphinx/$(VERSION)-docs.zip"
 
 clean-emacs:
 	find . -name '*~' -delete
