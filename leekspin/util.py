@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""util - common utilities
-"""
+"""Common general utilities."""
 
 from __future__ import print_function
 from __future__ import absolute_import
@@ -107,7 +106,7 @@ def randomIPv6():
     return validIP
 
 def randomPort():
-    """Get a random integer in the range [1026, 65530].
+    """Get a random integer in the range ``[1026, 65530]``.
 
     The reason that port 1025 is missing is because the IPv6 port (in the
     ``or-address``/``a`` lines), if there will be one, will be whatever the
@@ -115,11 +114,13 @@ def randomPort():
 
     The pluggable transport in the extrainfo descriptor (if there are any) are
     calculated as the random ORPort, plus some.
+
+    :rtype: int
     """
     return random.randint(1026, 65530)
 
 def getHexString(size):
-    """Get a capitalised hexidecimal string ``size`` bytes long.
+    """Get a capitalised hexidecimal string **size** bytes long.
 
     :param int size: The number of bytes in the returned string.
     :rtype: str
@@ -134,20 +135,18 @@ def makeTimeStamp(now=None, fmt=None, variation=False, period=None):
     """Get a random timestamp suitable for a bridge server descriptor.
 
     :param int now: The time, in seconds since the Epoch, to generate the
-                    timestamp for (and to consider as the maximum time, if
-                    other options are enabled).
+        timestamp for (and to consider as the maximum time, if other options
+        are enabled).
     :param str fmt: A strftime(3) format string for the timestamp. If not
-                    given, defaults to ISO-8601 format without the 'T'
-                    separator.
+        given, defaults to ISO-8601 format without the ``'T'`` separator.
     :param bool variation: If True, enable timestamp variation. Otherwise,
-                           make all timestamps be set to the current time.
-                           (default: False)
+        make all timestamps be set to the current time.
     :type period: int or None
     :param period: If given, vary the generated timestamps to be a random time
-                   between **period** hours ago and the current time. If
-                   ``None``, generate completely random timestamps which are
-                   anywhere between the Unix Epoch and the current time. This
-                   parameter only has an effect if ``variation`` is enabled.
+        between **period** hours ago and the current time. If ``None``,
+        generate completely random timestamps which are anywhere between the
+        Unix Epoch and the current time. This parameter only has an effect if
+        **variation** is enabled.
     """
     now = int(now) if now is not None else int(time.time())
     fmt = fmt if fmt else "%Y-%m-%d %H:%M:%S"
@@ -165,10 +164,10 @@ def makeTimeStamp(now=None, fmt=None, variation=False, period=None):
     return time.strftime(fmt, time.localtime(now))
 
 def writeDescToFile(filename, descriptors):
-    """Open ``filename`` and write a string containing descriptors into it.
+    """Open **filename** and write a string containing **descriptors** into it.
 
-    :param string filename: The name of the file to write to.
-    :param string descriptors: A giant string containing descriptors,
+    :param str filename: The name of the file to write to.
+    :param str descriptors: A giant string containing descriptors,
         newlines, formatting, whatever is necessary to make it look like a
         file tor would generate.
     """

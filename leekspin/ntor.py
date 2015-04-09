@@ -1,20 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""ntor ― Functionality for creating NTOR keys.
+"""Functionality for creating and working with NTOR keys.
 
 For a description of the NTOR handshake protocol, as well as its requisite
-keys, see §5.1.4 of the tor-spec_, as well as the NTOR handshake proposal_.
+keys, see §5.1.4 of `tor-spec.txt`_, as well as the NTOR handshake proposal_.
 
-**Module Overview:**
-
-::
-
-  createNTORSecretKey - Create a NTOR (Curve25519) secret key.
-  getNTORPublicKey - Retrieve the public portion of a NTOR secret key.
-
-.. _tor-spec: https://gitweb.torproject.org:torspec.git:tor-spec.txt
-.. _proposal: https://gitweb.torproject.org:torspec.git:proposals/216-ntor-handshake.txt
+.. _tor-spec.txt: https://gitweb.torproject.org/torspec.git/tree/tor-spec.txt
+.. _proposal: https://gitweb.torproject.org/torspec.git/tree/proposals/216-ntor-handshake.txt
 """
 
 from __future__ import print_function
@@ -49,23 +42,25 @@ class NTORPublicKeyError(Exception):
 def createNTORSecretKey():
     """Create a base64-encoded Curve25519 Salsa20-Poly1305 key.
 
-    See §5.1.4 of torspec.git/tor-spec.txt, as well as
+    See §5.1.4 of `tor-spec.txt`_, as well as
     torspec.git/proposals/216-ntor-handshake.txt (specifically the
     "Integrating with the rest of Tor" section towards the end). For a full
     description of the Curve25519 keypair, see "Curve25519: new Diffie-Hellman
     speed records" by D.J. Bernstein.
 
-    .. note: The subkey used in the NTOR handshake protocol should be
-             generated via HKDF-SHA256 as defined in :rfc:5869.
+    .. important:: The subkey used in the NTOR handshake protocol should be
+        generated via HKDF-SHA256 as defined in :rfc:`5869`.
+
+    .. _tor-spec.txt: https://gitweb.torproject.org/torspec.git/tree/tor-spec.txt
 
     :raises: NTORKeyCreationError, if pynacl is not available or not
-             installed, or if there was any other error while creating the key
-             (such as an error due to having a different Python NaCl wrapper
-             installed).
+       installed, or if there was any other error while creating the key (such
+       as an error due to having a different Python NaCl wrapper installed).
+
     :returns: The base64-encoded value of **NTORKey**, if available. The
-              trailing newline of the base64 value is stripped (though not the
-              padding, despite what proposals/216-ntor-handshake.txt
-              says). Otherwise, returns None.
+       trailing newline of the base64 value is stripped (though not the
+       padding, despite what proposals/216-ntor-handshake.txt
+       says). Otherwise, returns None.
     """
     if nacl is None:
         raise NTORKeyCreationError("NTOR key creation requires pynacl.")
@@ -84,8 +79,8 @@ def getNTORPublicKey(ntorSecretKey=None, base64=True):
     The **base64** version of the public Curve25519 key return from this
     function is suitable for use in a ``@type [bridge-]server-descriptor``.
 
-    .. todo: remember to tell nickm to fix the description in his proposal
-             about the ntor-onion-key padding removal.
+    .. todo:: Remember to tell nickm to fix the description in his proposal
+        about the ntor-onion-key padding removal.
 
     :type ntorSecretKey: ``nacl.public.PrivateKey``
     :param ntorSecretKey: A key created with :func:`createNTORSecretKey`. If

@@ -1,25 +1,7 @@
 # -*- coding: utf-8 -*-
 
-"""rsa ― OpenSSL RSA key and certificate utilities, fingerprint representation
-conversions, and other cryptographic utilities related to Onion Relay RSA
-keys.
+"""OpenSSL RSA key utilities."""
 
-**Module Overview:**
-
-Exceptions:
-```````````
-::
-
-  OpenSSLKeyGenError - Raised if there is an OpenSSL error during key creation.
-
-Functions:
-``````````
-::
-
-  createRSAKey - Create a new, OpenSSL-generated RSA keypair.
-  createKey - Create a set of public and private keypairs and certificates.
-
-"""
 
 from __future__ import print_function
 from __future__ import absolute_import
@@ -41,7 +23,6 @@ def createRSAKey(bits=1024):
     The current keysize for OR RSA keys is 1024 bits.
 
     :param int bits: The bitlength of the keypair to generate.
-                     (default: 1024)
     :raises OpenSSLKeyGenError: If key creation failed.
     :rtype: :class:`OpenSSL.crypto.PKey`
     :returns: An RSA keypair of bitlength ``bits``.
@@ -56,11 +37,10 @@ def createRSAKey(bits=1024):
 def createKey(selfsign=True, digest='sha1'):
     """Create a set of public and private RSA keypairs and corresponding certs.
 
-    :param bool selfsign: If True, use the private key to sign the public
-                          certificate (otherwise, the private key will only
-                          sign the private certificate to which it is
-                          attached).
-    :param str digest: The digest to use. (default: 'sha1')
+    :param bool selfsign: If ``True``, use the private key to sign the public
+       certificate (otherwise, the private key will only sign the private
+       certificate to which it is attached).
+    :param str digest: The digest to use.
     :raises OpenSSLKeyGenError: If key creation failed.
     :rtype: 4-tuple
     :returns: (private_key, private_cert, public_key, public_cert)

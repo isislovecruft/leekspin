@@ -1,13 +1,7 @@
 # -*- coding: utf-8 -*-
 
-"""Main leekspin module for generating descriptors and writing to disk.
-
-.. authors:: Isis Lovecruft <isis@torproject.org> 0xA3ADB67A2CDB8B35
-             Matthew Finkel <sysrqb@torproject.org>
-.. licence:: see LICENSE file for licensing details
-.. copyright:: (c) 2013-2015 The Tor Project, Inc.
-               (c) 2013-2015 Isis Lovecruft
-               (c) 2013-2015 Matthew Finkel
+"""Main leekspin module for generating mocked Onion Relay (OR) and Hidden
+Service (HS) descriptors and writing them to disk.
 """
 
 from __future__ import absolute_import
@@ -47,18 +41,21 @@ from leekspin import torversions
 from leekspin import util
 
 #: If pynacl was found by :attr:`leekspin.ntor.nacl`.
-nacl = ntor.nacl
+nacl = True if ntor.nacl else False
 
 
 def generateDescriptors(bridge=True):
     """Create keys, certs, signatures, documents and descriptors for an OR.
 
-    :returns:
-        A 3-tuple of strings:
-          - a ``@type [bridge-]extra-info`` descriptor,
-          - a ``@type [bridge-]server-descriptor``, and
-          - a ``@type network-status`` document
-       for a mock Tor relay/bridge.
+    :param bool bridge: If ``True``, generate Bridge descriptors; otherwise,
+        generate Relay descriptors.
+    :returns: A 3-tuple of strings:
+
+      - a ``@type [bridge-]extra-info`` descriptor,
+      - a ``@type [bridge-]server-descriptor``, and
+      - a ``@type network-status`` document
+
+      for a mock Tor relay/bridge.
     """
     ipv4 = util.randomIPv4()
     ipv6 = util.randomIPv6()
@@ -122,6 +119,20 @@ def generateDescriptors(bridge=True):
     return (extrainfoDesc, serverDesc, netstatusDesc)
 
 def generateHSDesc(replica):
+    """Generate a ``@type rendezvous-service-descriptor`` for an Hidden
+    Service.
+
+    .. todo:: Make generation of ``permanent_ids`` deal with HS "stealth"
+        authorisation.
+    .. todo:: Implement per-client ``session_keys`` and
+        ``descriptor_cookies``, see rend-spec.txt §2.1.
+
+    :param int replica: The ``replica`` number for this particular descriptor.
+        This influences the ``secret-id-part`` of the descriptor (see
+        :func:`~leekspin.rendezvous.calculateSecretIDPart`).
+    :rtype: str
+    :returns: A ``@type rendezvous-service-descriptor`` as a string.
+    """
     import time
 
     vers = torversions.getRandomVersion()
@@ -181,7 +192,13 @@ def generateHSDesc(replica):
 def createHiddenServiceDescriptors(count, replicas=2):
     """Generate hidden service descriptors.
 
-    :param int count: How many sets of descriptors to generate.
+    :param int count: How many sets of descriptors to generate. This
+       essentially corresponds to the number of fake ``.onion`` s which should
+       be mocked.
+    :param int replicas: The number of times which one particular mocked
+       Hidden Service should "replicate" its descriptor in the Tor Network's
+       ``HSDir`` hashring.  The default for real Hidden Services created with
+       Tor is ``2``.
     """
     logging.info("Generating %d hidden service descriptors..." % count)
 
@@ -217,6 +234,8 @@ def createRelayOrBridgeDescriptors(count, bridge=True):
 
     :param int count: How many sets of descriptors to generate, i.e. how
         many mock bridges/relays to create.
+    :param bool bridge: If ``True``, generate Bridge descriptors; otherwise,
+        generate Relay descriptors.
     """
     logging.info("Generating %d %s descriptors..." %
                  (int(count), 'bridge' if bridge else 'relay'))

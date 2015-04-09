@@ -1,14 +1,7 @@
 # -*- coding: utf-8 -*-
 
-"""Main leekspin module for generating descriptors and writing to disk.
+"""Functions for creating mock ``networkstatus`` documents."""
 
-.. authors:: Isis Lovecruft <isis@torproject.org> 0xA3ADB67A2CDB8B35
-             Matthew Finkel <sysrqb@torproject.org>
-.. licence:: see LICENSE file for licensing details
-.. copyright:: (c) 2013-2015 The Tor Project, Inc.
-               (c) 2013-2015 Isis Lovecruft
-               (c) 2013-2015 Matthew Finkel
-"""
 
 from __future__ import absolute_import
 from __future__ import print_function
@@ -33,11 +26,19 @@ def generateBridgeNetstatus(nickname, idkey_digest, server_desc_digest,
         p reject 1-65535
 
     :param str nickname: The router's nickname.
-    :param string idkey_digest: The SHA-1 digest of the router's public identity
+    :param str idkey_digest: The SHA-1 digest of the router's public identity
         key.
     :param str server_desc_digest: The SHA-1 digest of the router's
         ``@type [bridge-]server-descriptor``, before the descriptor is signed.
     :param str timestamp: An ISO 8601 timestamp, with a space as the separator.
+    :param str ipv4: The IP address for router's main ``ORAddress``.
+    :param str orport: The port for the router's main ``ORAddress``.
+    :type ipv6: str or ``None``
+    :param ipv6: Any IPv6 ``ORAddress`` es for this router.
+    :type dirport: str or ``None``
+    :param dirport: The router's ``DirPort``.
+    :param str flags: A space-separated list of flags assigned to this router.
+    :param str bandwidth_line: A weighted bandwidth line for this router.
     """
     idkey_b64  = binascii.b2a_base64(idkey_digest)
     idb64      = str(idkey_b64).strip().rstrip('==')
