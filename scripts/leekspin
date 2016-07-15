@@ -61,7 +61,9 @@ if __name__ == "__main__":
             descType = 'hidden_service'
 
         if options.descriptors and (options.descriptors > 0):
-            generator.create(options.descriptors, descriptorType=descType)
+            generator.create(options.descriptors, descriptorType=descType,
+                             withoutTAP=options.without_tap,
+                             withoutNTOR=options.without_ntor)
         else:
             raise SystemExit(parser.format_help())
 
