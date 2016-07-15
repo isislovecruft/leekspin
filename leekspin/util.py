@@ -54,6 +54,16 @@ def getArgParser():
                             help="generate HS rendezvous descriptors")
     descgroup1.set_defaults(relay=False, bridge=True, hidden_service=False)
 
+    descgroup2 = parser.add_argument_group()
+    descgroup2.title = "descriptor variations"
+    descgroup2.add_argument("-xt", "--without-tap", action="store_true",
+                            help=("generate descriptors without TAP support, "
+                                  "e.g. without RSA keys"))
+    descgroup2.add_argument("-xn", "--without-ntor", action="store_true",
+                            help=("generate descriptors without ntor support, "
+                                  "e.g. without Ed25519 keys"))
+    descgroup2.set_defaults(without_tap=False, without_ntor=False)
+
     group = parser.add_argument_group()
     group.title = "required arguments"
     group.add_argument("-n", "--descriptors", default=0,
