@@ -49,7 +49,8 @@ def generateServerDescriptor(nick, fingerprint, timestamp,
     doc.append(b"uptime %s" % uptime)
     doc.append(b"%s" % bandwidth)
     doc.append(b"%s" % makeExtraInfoDigestLine(extraInfoHexDigest, vers))
-    doc.append(b"%s" % onionKeyLine)
+    if onionKeyLine:  # We might have been run with the --without-TAP option
+        doc.append(b"%s" % onionKeyLine)
     doc.append(b"%s" % signingKeyLine)
 
     if not bridge:

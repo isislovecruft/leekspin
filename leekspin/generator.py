@@ -44,11 +44,15 @@ from leekspin import util
 nacl = True if ntor.nacl else False
 
 
-def generateDescriptors(bridge=True):
+def generateDescriptors(bridge=True, withoutTAP=False, withoutNTOR=False):
     """Create keys, certs, signatures, documents and descriptors for an OR.
 
     :param bool bridge: If ``True``, generate Bridge descriptors; otherwise,
         generate Relay descriptors.
+    :param bool withoutTAP: If ``True``, generate descriptors without
+        support for the TAP handshake, e.g. without RSA keys.
+    :param bool withoutTAP: If ``True``, generate descriptors without
+        support for the ntor handshake, e.g. without Ed25519 keys.
     :returns: A 3-tuple of strings:
 
       - a ``@type [bridge-]extra-info`` descriptor,
@@ -68,12 +72,16 @@ def generateDescriptors(bridge=True):
     timestamp = util.makeTimeStamp(variation=True, period=36)
     protocols = server.makeProtocolsLine(vers)
 
-    (secretOnionKey, publicOnionKey, onionKeyLine) = crypto.generateOnionKey()
+    if withoutTAP:
+        (secretOnionKey, publicOnionKey, onionKeyLine) = (None, None, None)
+    else:
+        (secretOnionKey, publicOnionKey, onionKeyLine) = crypto.generateOnionKey()
     (secretSigningKey, publicSigningKey, signingKeyLine) = crypto.generateSigningKey()
 
     secretNTORKey = None
     publicNTORKey = None
-    if nacl:
+
+    if not withoutNTOR and nacl:
         try:
             secretNTORKey = ntor.createNTORSecretKey()
             publicNTORKey = ntor.getNTORPublicKey(secretNTORKey)
@@ -229,7 +237,7 @@ def createHiddenServiceDescriptors(count, replicas=2):
         code = 0
         sys.exit(code)
 
-def createRelayOrBridgeDescriptors(count, bridge=True):
+def createRelayOrBridgeDescriptors(count, bridge=True, **kwargs):
     """Generate all types of descriptors and write them to files.
 
     :param int count: How many sets of descriptors to generate, i.e. how
@@ -240,6 +248,15 @@ def createRelayOrBridgeDescriptors(count, bridge=True):
     logging.info("Generating %d %s descriptors..." %
                  (int(count), 'bridge' if bridge else 'relay'))
     logging.info("Generated router nicknames:")
+
+    withoutTAP = False
+    withoutNTOR = False
+
+    if kwargs:
+        if "withoutTAP" in kwargs:
+            withoutTAP = kwargs.get("withoutTAP")
+        if "withoutNTOR" in kwargs:
+            withoutNTOR = kwargs.get("withoutNTOR")
 
     server_descriptors    = list()
     netstatus_consensus   = list()
@@ -254,7 +271,11 @@ def createRelayOrBridgeDescriptors(count, bridge=True):
 
         for i in xrange(int(count)):
             try:
-                extrainfo, server, netstatus = generateDescriptors(bridge=bridge)
+                (extrainfo,
+                 server,
+                 netstatus) = generateDescriptors(bridge=bridge,
+                                                  withoutTAP=withoutTAP,
+                                                  withoutNTOR=withoutNTOR)
             except Exception as error:
                 err, msg, tb = sys.exc_info()
                 try:
@@ -307,18 +328,24 @@ def createRelayOrBridgeDescriptors(count, bridge=True):
         code = 0
         sys.exit(code)
 
-def create(count, descriptorType=None):
+def create(count, descriptorType=None, withoutTAP=False, withoutNTOR=False):
     """Create **count** descriptors of type **descriptor_type**.
 
     :param int count: The number of descriptors to generate.
     :type descriptorType: str or ``None``
     :param descriptorType: One of ``"relay"``, ``"bridge"``,
         ``"hidden_service"``, or ``None``.
+    :param bool withoutTAP: If ``True``, generate descriptors without
+        support for the TAP handshake, e.g. without RSA keys.
+    :param bool withoutTAP: If ``True``, generate descriptors without
+        support for the ntor handshake, e.g. without Ed25519 keys.
     """
     logging.info("Creating descriptor type %s" % descriptorType)
 
     if descriptorType in ('bridge', 'relay'):
         bridge = bool(descriptorType == 'bridge')
-        createRelayOrBridgeDescriptors(count, bridge=bridge)
+        createRelayOrBridgeDescriptors(count, bridge=bridge,
+                                       withoutTAP=withoutTAP,
+                                       withoutNTOR=withoutNTOR)
     elif descriptorType in ('hidden_service',):
         createHiddenServiceDescriptors(count)
