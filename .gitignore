@@ -65,6 +65,8 @@ _trial_temp.lock
 
 # Generated bridge descriptors:
 bridge-descriptors
+cached-consensus
+cached-descriptors
 cached-extrainfo*
 networkstatus-bridges
 rendezvous-service-descriptors

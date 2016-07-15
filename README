@@ -32,7 +32,7 @@ Services within the Tor network.
 
 :authors: `Isis Lovecruft`_ <isis@torproject.org>
 :licence: MIT licence, see `LICENSE`_ file for details
-:copyright: © 2013-2015 Isis Lovecruft, The Tor Project, Inc.
+:copyright: © 2013-2016 Isis Lovecruft, The Tor Project, Inc.
 
 
 .. |Latest Version| image:: https://pypip.in/version/leekspin/badge.svg?style=flat
@@ -55,7 +55,7 @@ be to do::
 
 Otherwise, the standard setuptools commands work just fine::
 
-    $ git clone https://github.com/isislovecruft/leekspin.git
+    $ git clone https://git.torproject.org/user/isis/leekspin.git
     $ cd leekspin
     $ python setup.py install --record installed-files.txt
 
@@ -101,6 +101,11 @@ Descriptor types:
 -r, --relay            generate Relay descriptors
 -b, --bridge           generate Bridge descriptors
 -hs, --hidden-service  generate Hidden Service rendezvous descriptors
+
+Descriptor variations:
+
+-xt, --without-tap    generate descriptors without TAP support, e.g. without RSA keys
+-xn, --without-ntor   generate descriptors without ntor support, e.g. without Ed25519 keys
 
 Required arguments:
 
