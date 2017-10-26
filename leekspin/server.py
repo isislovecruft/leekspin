@@ -56,6 +56,9 @@ def generateServerDescriptor(nick, fingerprint, timestamp,
     if not bridge:
         doc.append(b"%s" % makeHSDirLine(vers))
 
+    if bridge:
+        doc.append(b"%s" % makeBridgeDistributionRequestLine())
+
     doc.append(b"contact Somebody <somebody@example.com>")
 
     if publicNTORKey is not None:
@@ -67,6 +70,24 @@ def generateServerDescriptor(nick, fingerprint, timestamp,
     unsignedDescriptor = b'\n'.join(doc)
 
     return unsignedDescriptor
+
+def makeBridgeDistributionRequestLine():
+    """Generate a ``bridge-distribution-request`` line.
+
+    :rtype: str
+    :returns: An ``@type bridge-server-descriptor``
+        ``bridge-distribution-request`` line.
+    """
+    methods = [
+        "any",
+        "none",
+        "https",
+        "email",
+        "moat",
+        "hyphae",
+    ]
+
+    return b"bridge-distribution-request %s" % random.choice(methods)
 
 def makeProtocolsLine(version=None):
     """Generate an appropriate ``[bridge-]server-descriptor`` ``protocols``

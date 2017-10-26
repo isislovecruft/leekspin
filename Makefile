@@ -14,6 +14,7 @@
 .DEFAULT: install test
 
 VERSION:=$(shell git describe)
+GNUPG:=$(shell which gpg2)
 
 all:
 	python setup.py build
@@ -83,6 +84,7 @@ coverage:
 	-firefox coverage-html/index.html
 
 upload: clean-all
-	torsocks python setup.py bdist_egg upload --sign
-	#torsocks python setup.py bdist_wheel upload --sign
-	torsocks python setup.py sdist --formats=gztar,zip upload --sign
+	python setup.py bdist_egg
+	#python setup.py bdist_wheel
+	python setup.py sdist --formats=gztar,zip
+	twine upload --sign --sign-with "$(GNUPG)" --skip-existing dist/*
